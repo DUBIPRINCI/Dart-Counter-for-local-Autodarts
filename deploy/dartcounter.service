@@ -1,0 +1,21 @@
+[Unit]
+Description=DartCounter - Local Dart Scoring App
+After=network.target
+
+[Service]
+Type=simple
+User=dartcounter
+Group=dartcounter
+WorkingDirectory=/opt/dartcounter
+ExecStart=/opt/dartcounter/dartcounter
+Restart=always
+RestartSec=5
+
+Environment=DC_PORT=8080
+Environment=DC_BM_HOST=localhost
+Environment=DC_BM_PORT=3180
+Environment=DC_SOUNDS_DIR=/opt/dartcounter/sounds
+Environment=DC_DATA_DIR=/opt/dartcounter/data
+
+[Install]
+WantedBy=multi-user.target

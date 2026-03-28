@@ -1,0 +1,203 @@
+/* Game Layout */
+.game-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Players Container */
+.players-container {
+    display: flex;
+    gap: 2px;
+    padding: 8px;
+    flex-shrink: 0;
+}
+
+.player-panel {
+    flex: 1;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    transition: border-color var(--transition-fast);
+    text-align: center;
+    min-width: 0;
+}
+.player-panel.active {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 12px var(--accent-green-dim);
+}
+
+.player-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.player-panel.active .player-name {
+    color: var(--accent-green);
+}
+
+.player-score {
+    font-family: var(--font-score);
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.player-stats {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.player-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.player-stat-value {
+    font-weight: 700;
+    color: var(--text-secondary);
+    font-family: var(--font-score);
+}
+
+.player-legs {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+.player-legs .leg-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-color);
+    margin: 0 2px;
+}
+.player-legs .leg-dot.won {
+    background: var(--accent-green);
+}
+
+/* Game Center */
+.game-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    min-height: 0;
+}
+
+/* Visit Display */
+.visit-display {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.visit-darts {
+    display: flex;
+    gap: 8px;
+}
+
+.visit-dart {
+    width: 64px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-surface);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-score);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+.visit-dart.empty {
+    color: var(--text-muted);
+}
+.visit-dart.filled {
+    color: var(--text-primary);
+    border-color: var(--accent-blue);
+}
+.visit-dart.triple {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+}
+.visit-dart.double {
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+}
+.visit-dart.correcting {
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 8px var(--accent-gold-dim);
+}
+
+.visit-total {
+    font-family: var(--font-score);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    min-width: 60px;
+    text-align: center;
+}
+
+/* Checkout Hint */
+.checkout-hint {
+    font-size: 1rem;
+    color: var(--accent-gold);
+    font-weight: 600;
+    min-height: 24px;
+    text-align: center;
+}
+
+/* Event Display */
+.event-display {
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: center;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.event-display.bust {
+    color: var(--accent-red);
+}
+.event-display.gameshot {
+    color: var(--accent-green);
+}
+.event-display.one-eighty {
+    color: var(--accent-gold);
+}
+
+/* Cricket-specific marks display */
+.cricket-marks {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+}
+.cricket-mark {
+    text-align: center;
+    font-size: 0.75rem;
+}
+.cricket-mark-number {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+.cricket-mark-count {
+    font-weight: 700;
+    font-family: var(--font-score);
+}

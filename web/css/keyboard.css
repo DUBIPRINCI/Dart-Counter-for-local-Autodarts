@@ -1,0 +1,128 @@
+/* Keyboard */
+.keyboard {
+    flex-shrink: 0;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+}
+
+.keyboard-numbers {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.keyboard-special {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.keyboard-modifiers {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.keyboard-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.key-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-main);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.key-btn:active {
+    transform: scale(0.95);
+}
+
+/* Number keys */
+.key-btn.num {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+.key-btn.num:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-secondary);
+}
+
+/* Special keys */
+.key-btn.special {
+    flex: 1;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+.key-btn.special:hover { background: var(--bg-hover); }
+.key-btn.special.bull {
+    color: var(--accent-green);
+    border-color: var(--accent-green-dim);
+}
+.key-btn.special.dbull {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold-dim);
+}
+
+/* Modifier keys */
+.key-btn.modifier {
+    flex: 1;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+.key-btn.modifier.selected {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+}
+.key-btn.modifier[data-mod="d"].selected {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+}
+.key-btn.modifier[data-mod="t"].selected {
+    background: var(--accent-gold-dim);
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+}
+
+/* Action keys */
+.key-btn.action {
+    flex: 1;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+.key-btn.action:hover { background: var(--bg-hover); }
+.key-btn.action[data-action="undo"] {
+    color: var(--accent-red);
+    border-color: var(--accent-red-dim);
+}
+.key-btn.action[data-action="next"] {
+    color: var(--accent-blue);
+    border-color: rgba(52, 152, 219, 0.3);
+}
+
+/* Responsive: 2 rows of 10 on small screens */
+@media (max-width: 600px) {
+    .keyboard-numbers {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    .key-btn {
+        min-height: 48px;
+    }
+}

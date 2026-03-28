@@ -1,0 +1,22 @@
+{
+  "name": "Default",
+  "version": "1.0",
+  "sounds": {
+    "throw": "throw.mp3",
+    "single": "single.mp3",
+    "double": "double.mp3",
+    "triple": "triple.mp3",
+    "bull": "bull.mp3",
+    "dbull": "dbull.mp3",
+    "miss": "miss.mp3",
+    "bust": "bust.mp3",
+    "gameon": "gameon.mp3",
+    "gameshot": "gameshot.mp3",
+    "matchshot": "matchshot.mp3",
+    "180": "180.mp3",
+    "hatTrick": "hat-trick.mp3",
+    "tonPlus": "ton-plus.mp3",
+    "highTon": "high-ton.mp3",
+    "lowTon": "low-ton.mp3"
+  }
+}

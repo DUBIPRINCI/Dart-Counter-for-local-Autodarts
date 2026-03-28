@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>DartCounter</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/scoreboard.css">
+    <link rel="stylesheet" href="/css/dartboard.css">
+    <link rel="stylesheet" href="/css/keyboard.css">
+    <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header id="header">
+            <div class="header-left">
+                <h1 class="logo">DartCounter</h1>
+            </div>
+            <div class="header-center">
+                <span id="autodarts-status" class="status-dot disconnected" title="Autodarts"></span>
+                <span id="game-info"></span>
+            </div>
+            <div class="header-right">
+                <button id="btn-new-game" class="btn btn-primary">Nouvelle Partie</button>
+                <button id="btn-settings" class="btn btn-icon" title="Paramètres">&#9881;</button>
+            </div>
+        </header>
+
+        <!-- Main content area - changes based on state -->
+        <main id="main">
+            <!-- Home / Setup screen -->
+            <div id="screen-home" class="screen active">
+                <div class="home-hero">
+                    <h2>DartCounter</h2>
+                    <p>Compteur de fléchettes local avec Autodarts</p>
+                    <button class="btn btn-primary btn-lg" onclick="app.showSetup()">Nouvelle Partie</button>
+                </div>
+                <div id="recent-games" class="recent-games"></div>
+            </div>
+
+            <!-- Game Setup screen -->
+            <div id="screen-setup" class="screen">
+                <div class="setup-container">
+                    <h2>Configuration de la partie</h2>
+
+                    <!-- Game Type Selection -->
+                    <div class="setup-section">
+                        <h3>Type de jeu</h3>
+                        <div class="game-type-grid" id="game-type-grid">
+                            <button class="game-type-btn selected" data-type="x01" data-variant="501">501</button>
+                            <button class="game-type-btn" data-type="x01" data-variant="301">301</button>
+                            <button class="game-type-btn" data-type="x01" data-variant="701">701</button>
+                            <button class="game-type-btn" data-type="cricket" data-variant="standard">Cricket</button>
+                            <button class="game-type-btn" data-type="atc" data-variant="standard">Around the Clock</button>
+                            <button class="game-type-btn" data-type="shanghai" data-variant="standard">Shanghai</button>
+                            <button class="game-type-btn" data-type="highscore" data-variant="standard">High Score</button>
+                        </div>
+                    </div>
+
+                    <!-- X01 Options -->
+                    <div class="setup-section" id="x01-options">
+                        <h3>Options</h3>
+                        <div class="option-row">
+                            <label>Entrée</label>
+                            <div class="option-group" id="in-mode">
+                                <button class="opt-btn selected" data-value="straight">Straight In</button>
+                                <button class="opt-btn" data-value="double">Double In</button>
+                            </div>
+                        </div>
+                        <div class="option-row">
+                            <label>Sortie</label>
+                            <div class="option-group" id="out-mode">
+                                <button class="opt-btn" data-value="straight">Straight Out</button>
+                                <button class="opt-btn selected" data-value="double">Double Out</button>
+                                <button class="opt-btn" data-value="master">Master Out</button>
+                            </div>
+                        </div>
+                        <div class="option-row">
+                            <label>Sets (best of)</label>
+                            <div class="option-group" id="sets-count">
+                                <button class="opt-btn selected" data-value="1">1</button>
+                                <button class="opt-btn" data-value="3">3</button>
+                                <button class="opt-btn" data-value="5">5</button>
+                                <button class="opt-btn" data-value="7">7</button>
+                            </div>
+                        </div>
+                        <div class="option-row">
+                            <label>Legs (best of)</label>
+                            <div class="option-group" id="legs-count">
+                                <button class="opt-btn" data-value="1">1</button>
+                                <button class="opt-btn selected" data-value="3">3</button>
+                                <button class="opt-btn" data-value="5">5</button>
+                                <button class="opt-btn" data-value="7">7</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cricket Options -->
+                    <div class="setup-section hidden" id="cricket-options">
+                        <h3>Mode Cricket</h3>
+                        <div class="option-group" id="cricket-mode">
+                            <button class="opt-btn selected" data-value="standard">Standard</button>
+                            <button class="opt-btn" data-value="cutthroat">Cut-throat</button>
+                            <button class="opt-btn" data-value="noscore">No Score</button>
+                        </div>
+                    </div>
+
+                    <!-- Players -->
+                    <div class="setup-section">
+                        <h3>Joueurs</h3>
+                        <div id="player-list" class="player-list"></div>
+                        <div class="add-player-row">
+                            <input type="text" id="new-player-name" placeholder="Nom du joueur" class="input" maxlength="20">
+                            <button class="btn btn-primary" onclick="app.addPlayer()">Ajouter</button>
+                        </div>
+                    </div>
+
+                    <div class="setup-actions">
+                        <button class="btn btn-secondary" onclick="app.showHome()">Annuler</button>
+                        <button class="btn btn-primary btn-lg" onclick="app.startGame()">Lancer la partie</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game screen -->
+            <div id="screen-game" class="screen">
+                <div class="game-layout">
+                    <!-- Player panels -->
+                    <div id="players-container" class="players-container"></div>
+
+                    <!-- Center: dartboard + visit info -->
+                    <div class="game-center">
+                        <div id="visit-display" class="visit-display">
+                            <div class="visit-darts" id="visit-darts">
+                                <div class="visit-dart empty" data-index="0">-</div>
+                                <div class="visit-dart empty" data-index="1">-</div>
+                                <div class="visit-dart empty" data-index="2">-</div>
+                            </div>
+                            <div class="visit-total" id="visit-total">0</div>
+                        </div>
+                        <div id="checkout-hint" class="checkout-hint"></div>
+                        <div id="event-display" class="event-display"></div>
+                    </div>
+
+                    <!-- Keyboard -->
+                    <div id="keyboard" class="keyboard">
+                        <div class="keyboard-numbers">
+                            <button class="key-btn num" data-num="1">1</button>
+                            <button class="key-btn num" data-num="2">2</button>
+                            <button class="key-btn num" data-num="3">3</button>
+                            <button class="key-btn num" data-num="4">4</button>
+                            <button class="key-btn num" data-num="5">5</button>
+                            <button class="key-btn num" data-num="6">6</button>
+                            <button class="key-btn num" data-num="7">7</button>
+                            <button class="key-btn num" data-num="8">8</button>
+                            <button class="key-btn num" data-num="9">9</button>
+                            <button class="key-btn num" data-num="10">10</button>
+                            <button class="key-btn num" data-num="11">11</button>
+                            <button class="key-btn num" data-num="12">12</button>
+                            <button class="key-btn num" data-num="13">13</button>
+                            <button class="key-btn num" data-num="14">14</button>
+                            <button class="key-btn num" data-num="15">15</button>
+                            <button class="key-btn num" data-num="16">16</button>
+                            <button class="key-btn num" data-num="17">17</button>
+                            <button class="key-btn num" data-num="18">18</button>
+                            <button class="key-btn num" data-num="19">19</button>
+                            <button class="key-btn num" data-num="20">20</button>
+                        </div>
+                        <div class="keyboard-special">
+                            <button class="key-btn special" data-action="miss">MISS</button>
+                            <button class="key-btn special bull" data-action="bull">BULL</button>
+                            <button class="key-btn special dbull" data-action="dbull">D-BULL</button>
+                        </div>
+                        <div class="keyboard-modifiers">
+                            <button class="key-btn modifier selected" data-mod="s">SINGLE</button>
+                            <button class="key-btn modifier" data-mod="d">DOUBLE</button>
+                            <button class="key-btn modifier" data-mod="t">TRIPLE</button>
+                        </div>
+                        <div class="keyboard-actions">
+                            <button class="key-btn action" data-action="undo">&#8630; UNDO</button>
+                            <button class="key-btn action" data-action="next">NEXT &#9654;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings screen -->
+            <div id="screen-settings" class="screen">
+                <div class="settings-container">
+                    <h2>Paramètres</h2>
+                    <div class="settings-section">
+                        <h3>Autodarts Board Manager</h3>
+                        <div class="setting-row">
+                            <label>Status</label>
+                            <span id="settings-bm-status">Vérification...</span>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Sons</h3>
+                        <div class="setting-row">
+                            <label>Pack actif</label>
+                            <select id="sound-pack-select" class="input"></select>
+                        </div>
+                        <div class="setting-row">
+                            <label>Volume</label>
+                            <input type="range" id="sound-volume" min="0" max="100" value="80" class="slider">
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="app.showHome()">Retour</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/sound.js"></script>
+    <script src="/js/ws.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
