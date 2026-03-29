@@ -96,8 +96,33 @@ const app = {
                 this.setupPlayers.push(player);
                 input.value = '';
                 this.renderSetupPlayers();
+            } else if (resp.status === 409) {
+                // Duplicate name — just add existing player to setup
+                const existing = this.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+                if (existing && !this.setupPlayers.find(p => p.id === existing.id)) {
+                    this.setupPlayers.push(existing);
+                    input.value = '';
+                    this.renderSetupPlayers();
+                } else {
+                    this.showInputError(input, 'Ce nom existe déjà');
+                }
+            } else {
+                const body = await resp.json().catch(() => ({}));
+                this.showInputError(input, body.error || `Erreur ${resp.status}`);
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('addPlayer error:', e);
+        }
+    },
+
+    showInputError(input, msg) {
+        input.classList.add('input-error');
+        input.placeholder = msg;
+        input.value = '';
+        setTimeout(() => {
+            input.classList.remove('input-error');
+            input.placeholder = 'Nom du joueur';
+        }, 2500);
     },
 
     removeSetupPlayer(index) {

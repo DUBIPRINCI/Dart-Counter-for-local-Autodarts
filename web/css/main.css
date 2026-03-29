@@ -108,6 +108,16 @@
     outline: none;
 }
 .input:focus { border-color: var(--accent-green); }
+.input.input-error {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+    animation: shake 0.3s ease;
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
 
 select.input {
     cursor: pointer;

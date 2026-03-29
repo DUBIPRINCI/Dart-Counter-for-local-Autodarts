@@ -431,6 +431,11 @@ func (s *Server) handleCreatePlayer(w http.ResponseWriter, r *http.Request) {
 
 	player, err := s.db.CreatePlayer(data.Name, data.Avatar)
 	if err != nil {
+		log.Printf("[ERROR] CreatePlayer(%q): %v", data.Name, err)
+		if strings.Contains(err.Error(), "UNIQUE") {
+			writeError(w, http.StatusConflict, "Un joueur avec ce nom existe déjà")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
