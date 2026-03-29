@@ -122,8 +122,11 @@ func (s *Server) setupRoutes() {
 	// Sounds
 	s.mux.HandleFunc("GET /api/sounds/packs", s.handleListSoundPacks)
 
-	// Autodarts status
+	// Autodarts status + debug
 	s.mux.HandleFunc("GET /api/autodarts/status", s.handleAutodartsStatus)
+	s.mux.HandleFunc("GET /api/autodarts/debug", s.handleAutodartsDebug)
+	s.mux.HandleFunc("GET /api/autodarts/raw", s.handleAutodartsRaw)
+	s.mux.HandleFunc("GET /api/autodarts/scan", s.handleAutodartsScan)
 
 	// Sound files
 	soundFS := http.FileServer(http.Dir(s.cfg.SoundsDir))
@@ -443,4 +446,60 @@ func (s *Server) handleAutodartsStatus(w http.ResponseWriter, r *http.Request) {
 		"port":      s.cfg.BMPort,
 		"polling":   s.poller.IsRunning(),
 	})
+}
+
+// handleAutodartsRaw returns the raw JSON from Board Manager /api/state
+func (s *Server) handleAutodartsRaw(w http.ResponseWriter, r *http.Request) {
+	raw, err := s.bmClient.GetRawState()
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(raw)
+}
+
+// handleAutodartsDebug returns the parsed state with debug info
+func (s *Server) handleAutodartsDebug(w http.ResponseWriter, r *http.Request) {
+	state, err := s.bmClient.GetState()
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+
+	// Build debug info showing how each throw is parsed
+	type throwDebug struct {
+		Raw     interface{} `json:"raw"`
+		Parsed  string      `json:"parsedSegment"`
+		Name    string      `json:"name"`
+		Number  int         `json:"number"`
+		Mult    int         `json:"multiplier"`
+		Bed     string      `json:"bed"`
+	}
+
+	debug := map[string]interface{}{
+		"rawJSON":    state.Raw,
+		"status":     state.Status,
+		"numThrows":  state.NumThrows,
+	}
+
+	throws := []throwDebug{}
+	for _, t := range state.Throws {
+		throws = append(throws, throwDebug{
+			Parsed: t.Segment.ToSegmentString(),
+			Name:   t.Segment.Name,
+			Number: t.Segment.Number,
+			Mult:   t.Segment.Multiplier,
+			Bed:    t.Segment.Bed,
+		})
+	}
+	debug["throws"] = throws
+
+	writeJSON(w, http.StatusOK, debug)
+}
+
+// handleAutodartsScan scans all known Board Manager endpoints
+func (s *Server) handleAutodartsScan(w http.ResponseWriter, r *http.Request) {
+	endpoints := s.bmClient.ListEndpoints()
+	writeJSON(w, http.StatusOK, endpoints)
 }
