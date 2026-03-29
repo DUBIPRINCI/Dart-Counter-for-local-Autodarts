@@ -20,11 +20,11 @@ func (db *DB) CreatePlayer(name, avatar string) (*Player, error) {
 		ID:        uuid.New().String(),
 		Name:      name,
 		Avatar:    avatar,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 	_, err := db.Exec(
 		"INSERT INTO players (id, name, avatar, created_at) VALUES (?, ?, ?, ?)",
-		p.ID, p.Name, p.Avatar, p.CreatedAt,
+		p.ID, p.Name, p.Avatar, p.CreatedAt.Format(time.RFC3339),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert player: %w", err)
@@ -34,15 +34,17 @@ func (db *DB) CreatePlayer(name, avatar string) (*Player, error) {
 
 func (db *DB) GetPlayer(id string) (*Player, error) {
 	p := &Player{}
+	var createdAt string
 	err := db.QueryRow(
 		"SELECT id, name, avatar, created_at FROM players WHERE id = ?", id,
-	).Scan(&p.ID, &p.Name, &p.Avatar, &p.CreatedAt)
+	).Scan(&p.ID, &p.Name, &p.Avatar, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get player: %w", err)
 	}
+	p.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 	return p, nil
 }
 
@@ -56,9 +58,11 @@ func (db *DB) ListPlayers() ([]Player, error) {
 	var players []Player
 	for rows.Next() {
 		var p Player
-		if err := rows.Scan(&p.ID, &p.Name, &p.Avatar, &p.CreatedAt); err != nil {
+		var createdAt string
+		if err := rows.Scan(&p.ID, &p.Name, &p.Avatar, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan player: %w", err)
 		}
+		p.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		players = append(players, p)
 	}
 	return players, rows.Err()
