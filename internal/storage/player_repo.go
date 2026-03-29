@@ -8,6 +8,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// parseTime tries several datetime formats used by SQLite/Go drivers
+func parseTime(s string) time.Time {
+	formats := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02T15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05-07:00",
+		"2006-01-02 15:04:05",
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 type Player struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
@@ -44,7 +62,7 @@ func (db *DB) GetPlayer(id string) (*Player, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get player: %w", err)
 	}
-	p.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	p.CreatedAt = parseTime(createdAt)
 	return p, nil
 }
 
@@ -62,7 +80,7 @@ func (db *DB) ListPlayers() ([]Player, error) {
 		if err := rows.Scan(&p.ID, &p.Name, &p.Avatar, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan player: %w", err)
 		}
-		p.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		p.CreatedAt = parseTime(createdAt)
 		players = append(players, p)
 	}
 	return players, rows.Err()

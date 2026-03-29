@@ -7,6 +7,23 @@ import (
 	"time"
 )
 
+func parseGameTime(s string) time.Time {
+	formats := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02T15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05-07:00",
+		"2006-01-02 15:04:05",
+	}
+	for _, f := range formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
 type GameRecord struct {
 	ID         string     `json:"id"`
 	GameType   string     `json:"gameType"`
@@ -56,13 +73,13 @@ func (db *DB) GetGame(id string) (*GameRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get game: %w", err)
 	}
-	g.CreatedAt, _ = time.Parse(time.RFC3339, createdAt.String)
+	g.CreatedAt = parseGameTime(createdAt.String)
 	if startedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, startedAt.String)
+		t := parseGameTime(startedAt.String)
 		g.StartedAt = &t
 	}
 	if finishedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, finishedAt.String)
+		t := parseGameTime(finishedAt.String)
 		g.FinishedAt = &t
 	}
 	return g, nil
@@ -85,13 +102,13 @@ func (db *DB) ListGames(limit, offset int) ([]GameRecord, error) {
 		if err := rows.Scan(&g.ID, &g.GameType, &g.Variant, &g.Options, &g.Status, &g.WinnerID, &startedAt, &finishedAt, &createdAt); err != nil {
 			return nil, err
 		}
-		g.CreatedAt, _ = time.Parse(time.RFC3339, createdAt.String)
+		g.CreatedAt = parseGameTime(createdAt.String)
 		if startedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, startedAt.String)
+			t := parseGameTime(startedAt.String)
 			g.StartedAt = &t
 		}
 		if finishedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, finishedAt.String)
+			t := parseGameTime(finishedAt.String)
 			g.FinishedAt = &t
 		}
 		games = append(games, g)
