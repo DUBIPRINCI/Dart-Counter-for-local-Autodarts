@@ -399,14 +399,29 @@ const app = {
             });
         });
 
-        // Dart slot click → correction mode
+        // Dart slot click → show keyboard (correction mode for filled, input mode for empty)
         const activeDarts = document.getElementById('active-darts');
         if (activeDarts) {
             activeDarts.addEventListener('click', (e) => {
                 const dart = e.target.closest('.adart:not(.total)');
-                if (!dart || dart.classList.contains('empty')) return;
+                if (!dart) return;
                 const index = parseInt(dart.dataset.index);
-                this.correctingDart = (this.correctingDart === index) ? -1 : index;
+                const keyboard = document.getElementById('keyboard');
+
+                if (dart.classList.contains('empty')) {
+                    // Empty slot: show keyboard for manual input, no correction index
+                    this.correctingDart = -1;
+                    keyboard?.classList.add('input-active');
+                } else {
+                    // Filled slot: toggle correction mode
+                    const wasActive = this.correctingDart === index;
+                    this.correctingDart = wasActive ? -1 : index;
+                    if (wasActive) {
+                        keyboard?.classList.remove('input-active');
+                    } else {
+                        keyboard?.classList.add('input-active');
+                    }
+                }
                 this.renderActiveDarts(this.state?.players[this.state?.currentPlayer]);
             });
         }
@@ -439,6 +454,9 @@ const app = {
                 this.renderGame();
             }
         } catch (e) { console.warn('Throw failed:', e); }
+
+        // Hide input keyboard rows after throw
+        document.getElementById('keyboard')?.classList.remove('input-active');
 
         // Reset modifier to single
         this.selectedModifier = 's';

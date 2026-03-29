@@ -7,22 +7,31 @@
 }
 
 .keyboard-numbers {
-    display: grid;
+    display: none;
     grid-template-columns: repeat(10, 1fr);
     gap: 4px;
     margin-bottom: 4px;
 }
 
 .keyboard-special {
-    display: flex;
+    display: none;
     gap: 4px;
     margin-bottom: 4px;
 }
 
 .keyboard-modifiers {
-    display: flex;
+    display: none;
     gap: 4px;
     margin-bottom: 4px;
+}
+
+/* Show input rows when a dart slot is selected */
+.keyboard.input-active .keyboard-numbers {
+    display: grid;
+}
+.keyboard.input-active .keyboard-special,
+.keyboard.input-active .keyboard-modifiers {
+    display: flex;
 }
 
 .keyboard-actions {

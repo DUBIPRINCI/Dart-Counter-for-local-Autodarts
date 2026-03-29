@@ -98,15 +98,8 @@ func (s *Server) setupPoller() {
 		s.engineMu.RUnlock()
 
 		switch evt.Status {
-		case "Takeout", "TakeoutInProcess":
-			// Player started removing darts — advance even if < 3 thrown
-			if eng != nil {
-				eng.NextPlayer()
-				s.hub.Broadcast(ws.MsgState, eng.State())
-				log.Printf("[SERVER] NextPlayer triggered by autodarts status: %s", evt.Status)
-			}
 		case "newTurn":
-			// Throws array reset to 0 — finish any pending takeout
+			// Throws array reset to 0 — darts fully removed, finish takeout
 			if eng != nil {
 				state := eng.FinishTakeout()
 				s.hub.Broadcast(ws.MsgState, state)

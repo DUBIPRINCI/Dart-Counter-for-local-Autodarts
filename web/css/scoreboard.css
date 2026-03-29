@@ -28,7 +28,7 @@
 }
 
 .active-name {
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--accent-green);
     letter-spacing: 0.06em;
@@ -37,24 +37,24 @@
 
 .active-score {
     font-family: var(--font-score);
-    font-size: 5.5rem;
+    font-size: 8rem;
     font-weight: 900;
     line-height: 1;
     color: var(--text-primary);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -3px;
+    letter-spacing: -4px;
 }
 
 .active-stats {
     display: flex;
     align-items: center;
-    gap: 18px;
-    font-size: 0.78rem;
+    gap: 22px;
+    font-size: 1rem;
     color: var(--text-muted);
     flex-wrap: wrap;
     justify-content: center;
 }
-.active-stats span { font-weight: 700; color: var(--text-secondary); font-family: var(--font-score); margin-right: 2px; }
+.active-stats span { font-weight: 700; color: var(--text-secondary); font-family: var(--font-score); margin-right: 2px; font-size: 1.1rem; }
 
 .leg-dots { display: flex; gap: 3px; align-items: center; }
 .leg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-color); }
@@ -62,10 +62,10 @@
 
 /* ─── Event & Checkout ────────────────────────── */
 .event-display {
-    font-size: 1.8rem;
+    font-size: 2.2rem;
     font-weight: 800;
     text-align: center;
-    min-height: 36px;
+    min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -75,10 +75,10 @@
 .event-display.one-eighty { color: var(--accent-gold); }
 
 .checkout-hint {
-    font-size: 0.88rem;
+    font-size: 1.1rem;
     color: var(--accent-gold);
     font-weight: 600;
-    min-height: 18px;
+    min-height: 22px;
     text-align: center;
 }
 
