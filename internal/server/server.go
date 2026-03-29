@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"dartcounter/internal/autodarts"
@@ -132,22 +133,28 @@ func (s *Server) setupRoutes() {
 	soundFS := http.FileServer(http.Dir(s.cfg.SoundsDir))
 	s.mux.Handle("/sounds/", http.StripPrefix("/sounds/", soundFS))
 
-	// Static files (SPA)
+	// Static files (SPA) - MUST be last, and must NOT intercept /api/ or /ws
 	if s.webFS != nil {
 		fileServer := http.FileServerFS(s.webFS)
 		s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			// Try to serve the file; fall back to index.html for SPA routing
 			path := r.URL.Path
+
+			// Never intercept API or WebSocket routes
+			if strings.HasPrefix(path, "/api/") || path == "/ws" {
+				http.NotFound(w, r)
+				return
+			}
+
 			if path == "/" {
 				path = "/index.html"
 			}
-			// Check if file exists
+			// Check if file exists in embedded FS
 			if f, err := s.webFS.Open(path[1:]); err == nil {
 				f.Close()
 				fileServer.ServeHTTP(w, r)
 				return
 			}
-			// SPA fallback
+			// SPA fallback: serve index.html
 			r.URL.Path = "/"
 			fileServer.ServeHTTP(w, r)
 		})
