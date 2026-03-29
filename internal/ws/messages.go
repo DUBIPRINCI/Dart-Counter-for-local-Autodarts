@@ -15,10 +15,11 @@ const (
 
 // Message types from client to server
 const (
-	MsgManualThrow = "manualThrow"
-	MsgCorrect     = "correct"
-	MsgUndo        = "undo"
-	MsgNextPlayer  = "nextPlayer"
+	MsgManualThrow  = "manualThrow"
+	MsgCorrect      = "correct"
+	MsgUndo         = "undo"
+	MsgNextPlayer   = "nextPlayer"
+	MsgFinishTakeout = "finishTakeout"
 )
 
 type Message struct {

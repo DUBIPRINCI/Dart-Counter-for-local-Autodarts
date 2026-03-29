@@ -64,7 +64,19 @@ func NewShanghaiEngine(opts GameOptions) *ShanghaiEngine {
 func (e *ShanghaiEngine) GetID() string           { return e.state.ID }
 func (e *ShanghaiEngine) State() *GameState        { s := e.state; return &s }
 func (e *ShanghaiEngine) CheckoutHint(int) string  { return fmt.Sprintf("Target: %d", e.round) }
-func (e *ShanghaiEngine) IsVisitComplete() bool     { return e.state.CurrentDart >= 3 }
+func (e *ShanghaiEngine) IsVisitComplete() bool     { return e.state.WaitingTakeout || e.state.CurrentDart >= 3 }
+
+func (e *ShanghaiEngine) FinishTakeout() *GameState {
+	if !e.state.WaitingTakeout {
+		return e.State()
+	}
+	e.state.WaitingTakeout = false
+	e.state.Players[e.state.CurrentPlayer].CurrentVisit = Visit{}
+	if e.state.Status != "finished" {
+		e.advancePlayer()
+	}
+	return e.State()
+}
 
 func (e *ShanghaiEngine) ProcessThrow(t Throw) ThrowResult {
 	e.saveHistory()
@@ -105,8 +117,7 @@ func (e *ShanghaiEngine) ProcessThrow(t Throw) ThrowResult {
 	}
 
 	if e.state.CurrentDart >= 3 {
-		p.CurrentVisit = Visit{}
-		e.advancePlayer()
+		e.state.WaitingTakeout = true
 	}
 
 	e.state.CheckoutHint = fmt.Sprintf("Target: %d", e.round)

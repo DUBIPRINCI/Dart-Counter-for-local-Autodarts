@@ -63,7 +63,19 @@ func NewATCEngine(opts GameOptions) *ATCEngine {
 func (e *ATCEngine) GetID() string           { return e.state.ID }
 func (e *ATCEngine) State() *GameState        { s := e.state; return &s }
 func (e *ATCEngine) CheckoutHint(int) string  { return "" }
-func (e *ATCEngine) IsVisitComplete() bool     { return e.state.CurrentDart >= 3 }
+func (e *ATCEngine) IsVisitComplete() bool     { return e.state.WaitingTakeout || e.state.CurrentDart >= 3 }
+
+func (e *ATCEngine) FinishTakeout() *GameState {
+	if !e.state.WaitingTakeout {
+		return e.State()
+	}
+	e.state.WaitingTakeout = false
+	e.state.Players[e.state.CurrentPlayer].CurrentVisit = Visit{}
+	if e.state.Status != "finished" {
+		e.NextPlayer()
+	}
+	return e.State()
+}
 
 func (e *ATCEngine) ProcessThrow(t Throw) ThrowResult {
 	e.saveHistory()
@@ -120,8 +132,7 @@ func (e *ATCEngine) ProcessThrow(t Throw) ThrowResult {
 	e.state.CheckoutHint = fmt.Sprintf("Target: %d", as.CurrentTarget)
 
 	if e.state.CurrentDart >= 3 {
-		p.CurrentVisit = Visit{}
-		e.NextPlayer()
+		e.state.WaitingTakeout = true
 	}
 
 	return ThrowResult{State: e.state, SoundEvents: sounds}

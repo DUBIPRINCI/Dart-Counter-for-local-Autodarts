@@ -76,7 +76,19 @@ func NewCricketEngine(opts GameOptions) *CricketEngine {
 func (e *CricketEngine) GetID() string           { return e.state.ID }
 func (e *CricketEngine) State() *GameState        { s := e.state; return &s }
 func (e *CricketEngine) CheckoutHint(int) string  { return "" }
-func (e *CricketEngine) IsVisitComplete() bool     { return e.state.CurrentDart >= 3 }
+func (e *CricketEngine) IsVisitComplete() bool     { return e.state.WaitingTakeout || e.state.CurrentDart >= 3 }
+
+func (e *CricketEngine) FinishTakeout() *GameState {
+	if !e.state.WaitingTakeout {
+		return e.State()
+	}
+	e.state.WaitingTakeout = false
+	e.state.Players[e.state.CurrentPlayer].CurrentVisit = Visit{}
+	if e.state.Status != "finished" {
+		e.NextPlayer()
+	}
+	return e.State()
+}
 
 func (e *CricketEngine) ProcessThrow(t Throw) ThrowResult {
 	e.saveHistory()
@@ -135,8 +147,8 @@ func (e *CricketEngine) ProcessThrow(t Throw) ThrowResult {
 
 	if e.state.CurrentDart >= 3 {
 		p.CurrentVisit.TotalScore = e.visitScore(p)
-		p.CurrentVisit = Visit{}
-		e.NextPlayer()
+		// Don't clear visit yet — wait for FinishTakeout()
+		e.state.WaitingTakeout = true
 	}
 
 	return ThrowResult{State: e.state, SoundEvents: sounds}

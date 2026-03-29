@@ -64,7 +64,19 @@ func NewHighScoreEngine(opts GameOptions) *HighScoreEngine {
 func (e *HighScoreEngine) GetID() string           { return e.state.ID }
 func (e *HighScoreEngine) State() *GameState        { s := e.state; return &s }
 func (e *HighScoreEngine) CheckoutHint(int) string  { return fmt.Sprintf("Round %d/%d", e.round, e.maxRounds) }
-func (e *HighScoreEngine) IsVisitComplete() bool     { return e.state.CurrentDart >= 3 }
+func (e *HighScoreEngine) IsVisitComplete() bool     { return e.state.WaitingTakeout || e.state.CurrentDart >= 3 }
+
+func (e *HighScoreEngine) FinishTakeout() *GameState {
+	if !e.state.WaitingTakeout {
+		return e.State()
+	}
+	e.state.WaitingTakeout = false
+	e.state.Players[e.state.CurrentPlayer].CurrentVisit = Visit{}
+	if e.state.Status != "finished" {
+		e.advancePlayer()
+	}
+	return e.State()
+}
 
 func (e *HighScoreEngine) ProcessThrow(t Throw) ThrowResult {
 	e.saveHistory()
@@ -104,8 +116,8 @@ func (e *HighScoreEngine) ProcessThrow(t Throw) ThrowResult {
 		}
 
 		e.updateAverage(p)
-		p.CurrentVisit = Visit{}
-		e.advancePlayer()
+		// Don't clear visit or advance yet — wait for FinishTakeout()
+		e.state.WaitingTakeout = true
 	}
 
 	e.state.CheckoutHint = fmt.Sprintf("Round %d/%d", e.round, e.maxRounds)
@@ -145,6 +157,10 @@ func (e *HighScoreEngine) updateAverage(p *PlayerState) {
 }
 
 func (e *HighScoreEngine) NextPlayer() {
+	if e.state.WaitingTakeout {
+		e.FinishTakeout()
+		return
+	}
 	e.advancePlayer()
 }
 

@@ -36,22 +36,25 @@ type PlayerState struct {
 
 // GameState holds the full live state of a game
 type GameState struct {
-	ID             string        `json:"id"`
-	GameType       string        `json:"gameType"`
-	Variant        string        `json:"variant"`
-	Options        GameOptions   `json:"options"`
-	Status         string        `json:"status"` // "setup", "active", "finished", "abandoned"
-	Players        []PlayerState `json:"players"`
-	CurrentPlayer  int           `json:"currentPlayer"`
-	CurrentDart    int           `json:"currentDart"` // 0, 1, 2
-	CurrentSet     int           `json:"currentSet"`
-	CurrentLeg     int           `json:"currentLeg"`
-	WinnerID       string        `json:"winnerId,omitempty"`
-	CheckoutHint   string        `json:"checkoutHint,omitempty"`
-	LastEvent      string        `json:"lastEvent,omitempty"`
-	SoundEvents    []string      `json:"soundEvents,omitempty"`
-	StartedAt      *time.Time    `json:"startedAt,omitempty"`
-	FinishedAt     *time.Time    `json:"finishedAt,omitempty"`
+	ID              string        `json:"id"`
+	GameType        string        `json:"gameType"`
+	Variant         string        `json:"variant"`
+	Options         GameOptions   `json:"options"`
+	Status          string        `json:"status"` // "setup", "active", "finished", "abandoned"
+	Players         []PlayerState `json:"players"`
+	CurrentPlayer   int           `json:"currentPlayer"`
+	CurrentDart     int           `json:"currentDart"` // 0, 1, 2
+	CurrentSet      int           `json:"currentSet"`
+	CurrentLeg      int           `json:"currentLeg"`
+	WinnerID        string        `json:"winnerId,omitempty"`
+	CheckoutHint    string        `json:"checkoutHint,omitempty"`
+	LastEvent       string        `json:"lastEvent,omitempty"`
+	SoundEvents     []string      `json:"soundEvents,omitempty"`
+	// WaitingTakeout = true : visit complete, darts still on board, waiting for removal
+	// The current player's visit darts stay visible until FinishTakeout() is called
+	WaitingTakeout  bool          `json:"waitingTakeout"`
+	StartedAt       *time.Time    `json:"startedAt,omitempty"`
+	FinishedAt      *time.Time    `json:"finishedAt,omitempty"`
 }
 
 // GameOptions configures a game

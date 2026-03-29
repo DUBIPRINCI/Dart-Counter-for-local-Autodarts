@@ -117,6 +117,58 @@
     border-color: rgba(52, 152, 219, 0.3);
 }
 
+/* Keyboard disabled state (during takeout) */
+.keyboard-disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Takeout overlay */
+.takeout-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.5);
+    border-top: 2px solid var(--accent-green);
+    animation: fadeIn 0.2s ease;
+}
+
+.takeout-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+}
+
+.takeout-icon {
+    font-size: 2.5rem;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.takeout-text {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent-green);
+    text-transform: uppercase;
+}
+
+.takeout-btn {
+    min-width: 160px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
 /* Responsive: 2 rows of 10 on small screens */
 @media (max-width: 600px) {
     .keyboard-numbers {
@@ -124,5 +176,8 @@
     }
     .key-btn {
         min-height: 48px;
+    }
+    .takeout-text {
+        font-size: 0.95rem;
     }
 }

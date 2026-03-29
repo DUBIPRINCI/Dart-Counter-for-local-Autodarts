@@ -273,12 +273,44 @@ const app = {
         const hint = document.getElementById('checkout-hint');
         hint.textContent = this.state.checkoutHint || '';
 
+        // Show/hide takeout overlay
+        this.renderTakeoutOverlay();
+
         // Handle finished game
         if (this.state.status === 'finished') {
             const winner = this.state.players.find(p => p.playerId === this.state.winnerId);
             const display = document.getElementById('event-display');
             display.textContent = winner ? `${winner.playerName} WINS!` : 'GAME OVER';
             display.className = 'event-display gameshot anim-event-pop';
+        }
+    },
+
+    renderTakeoutOverlay() {
+        let overlay = document.getElementById('takeout-overlay');
+        const keyboard = document.getElementById('keyboard');
+
+        if (this.state.waitingTakeout) {
+            // Create overlay if it doesn't exist
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'takeout-overlay';
+                overlay.className = 'takeout-overlay';
+                overlay.innerHTML = `
+                    <div class="takeout-message">
+                        <div class="takeout-icon">🎯</div>
+                        <div class="takeout-text">RETIREZ VOS FLÉCHETTES</div>
+                        <button class="btn btn-primary takeout-btn" onclick="app.doFinishTakeout()">SUIVANT ▶</button>
+                    </div>
+                `;
+                if (keyboard) {
+                    keyboard.parentNode.insertBefore(overlay, keyboard);
+                }
+            }
+            if (overlay) overlay.style.display = 'flex';
+            if (keyboard) keyboard.classList.add('keyboard-disabled');
+        } else {
+            if (overlay) overlay.style.display = 'none';
+            if (keyboard) keyboard.classList.remove('keyboard-disabled');
         }
     },
 
@@ -450,8 +482,22 @@ const app = {
     },
 
     async doNextPlayer() {
+        // If waiting for takeout, finish takeout instead
+        if (this.state?.waitingTakeout) {
+            return this.doFinishTakeout();
+        }
         try {
             const resp = await fetch('/api/games/current/next', { method: 'POST' });
+            if (resp.ok && !this.ws.connected) {
+                this.state = await resp.json();
+                this.renderGame();
+            }
+        } catch (e) {}
+    },
+
+    async doFinishTakeout() {
+        try {
+            const resp = await fetch('/api/games/current/finish-takeout', { method: 'POST' });
             if (resp.ok && !this.ws.connected) {
                 this.state = await resp.json();
                 this.renderGame();

@@ -3,6 +3,9 @@ package game
 // Engine is the interface all game types implement
 type Engine interface {
 	ProcessThrow(t Throw) ThrowResult
+	// FinishTakeout is called when the player removes their darts from the board.
+	// It clears the current visit display and advances to the next player.
+	FinishTakeout() *GameState
 	Undo() *GameState
 	State() *GameState
 	IsVisitComplete() bool

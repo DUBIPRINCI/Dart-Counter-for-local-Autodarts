@@ -9,8 +9,8 @@ import (
 
 type X01Engine struct {
 	state     GameState
-	history   []GameState // for undo
-	legThrows [][]Visit   // throws per player for current leg
+	history   []GameState
+	legThrows [][]Visit
 }
 
 func NewX01Engine(opts GameOptions) *X01Engine {
@@ -75,19 +75,20 @@ func NewX01Engine(opts GameOptions) *X01Engine {
 		},
 		legThrows: make([][]Visit, len(opts.PlayerIDs)),
 	}
-
-	// Set checkout hint for first player
 	e.updateCheckoutHint()
-
 	return e
 }
 
-func (e *X01Engine) GetID() string {
-	return e.state.ID
-}
+func (e *X01Engine) GetID() string { return e.state.ID }
 
 func (e *X01Engine) State() *GameState {
 	s := e.state
+	s.Players = make([]PlayerState, len(e.state.Players))
+	copy(s.Players, e.state.Players)
+	for i := range s.Players {
+		s.Players[i].CurrentVisit.Darts = make([]Throw, len(e.state.Players[i].CurrentVisit.Darts))
+		copy(s.Players[i].CurrentVisit.Darts, e.state.Players[i].CurrentVisit.Darts)
+	}
 	return &s
 }
 
@@ -99,44 +100,48 @@ func (e *X01Engine) CheckoutHint(score int) string {
 }
 
 func (e *X01Engine) IsVisitComplete() bool {
-	return e.state.CurrentDart >= 3
+	return e.state.WaitingTakeout || e.state.CurrentDart >= 3
 }
 
 func (e *X01Engine) ProcessThrow(t Throw) ThrowResult {
-	// Save state for undo
+	// Ignore throws while waiting for takeout
+	if e.state.WaitingTakeout {
+		return ThrowResult{State: *e.State()}
+	}
+
 	e.saveHistory()
 
 	p := &e.state.Players[e.state.CurrentPlayer]
 	sounds := []string{"throw"}
 	event := ""
 
-	// Check double-in requirement
+	// Double-in check
 	if !p.HasStarted && e.state.Options.InMode == "double" {
 		if t.Multiplier != 2 {
-			// Dart doesn't count, but still track it
 			p.CurrentVisit.Darts = append(p.CurrentVisit.Darts, t)
 			p.DartsThrown++
 			e.state.CurrentDart++
 			sounds = append(sounds, "miss")
-
 			if e.state.CurrentDart >= 3 {
-				e.finishVisit(p)
+				e.markVisitDone(p, false)
 			}
 			e.updateCheckoutHint()
-			return ThrowResult{State: e.state, SoundEvents: sounds, Event: event}
+			return ThrowResult{State: *e.State(), SoundEvents: sounds}
 		}
 		p.HasStarted = true
 	}
 
-	// Apply score
-	previousScore := p.Score
+	// Record score before this visit (for bust revert)
+	scoreBeforeVisit := e.scoreAtStartOfVisit(p)
+
+	// Apply dart
 	p.Score -= t.Score
 	p.DartsThrown++
 	p.CurrentVisit.Darts = append(p.CurrentVisit.Darts, t)
 	p.CurrentVisit.TotalScore += t.Score
 	e.state.CurrentDart++
 
-	// Sound for the dart type
+	// Dart sound
 	switch {
 	case t.Multiplier == 3:
 		sounds = append(sounds, "triple")
@@ -154,51 +159,26 @@ func (e *X01Engine) ProcessThrow(t Throw) ThrowResult {
 
 	// Check bust
 	if e.isBust(p) {
-		p.Score = previousScore + p.CurrentVisit.TotalScore - t.Score // revert all visit darts
-		// Actually revert the entire visit score
-		p.Score = previousScore
-		for _, d := range p.CurrentVisit.Darts[:len(p.CurrentVisit.Darts)-1] {
-			p.Score += d.Score
-		}
-		p.Score = previousScore // simpler: revert to score before this visit
-		// Recalculate: revert all darts in this visit
-		visitScore := 0
-		for _, d := range p.CurrentVisit.Darts {
-			visitScore += d.Score
-		}
-		p.Score = previousScore               // score before the bust dart
-		p.Score += t.Score                     // add back the bust dart we just subtracted
-		p.Score = previousScore                // actually just reset to start of visit
-		// Let me simplify: at start of visit, score was previousScore + all previous darts this visit
-		startOfVisitScore := previousScore
-		for i := 0; i < len(p.CurrentVisit.Darts)-1; i++ {
-			startOfVisitScore += p.CurrentVisit.Darts[i].Score
-		}
-		p.Score = startOfVisitScore + t.Score // this is wrong direction
-
-		// Simplest approach: recalculate from start-of-visit
-		p.Score = e.scoreAtStartOfVisit(p)
+		// Revert score to start of visit
+		p.Score = scoreBeforeVisit
 		p.CurrentVisit.IsBust = true
-		e.state.CurrentDart = 3 // force end of visit
+		e.state.CurrentDart = 3
 		event = "bust"
-		sounds = []string{"bust"} // bust overrides other sounds
-		e.finishVisit(p)
+		sounds = []string{"bust"}
+		e.markVisitDone(p, false)
 		e.updateCheckoutHint()
-		return ThrowResult{State: e.state, SoundEvents: sounds, Event: event}
+		e.state.LastEvent = event
+		e.state.SoundEvents = sounds
+		return ThrowResult{State: *e.State(), SoundEvents: sounds, Event: event}
 	}
 
-	// Check leg won
+	// Check leg/match won
 	if p.Score == 0 {
-		event = "gameshot"
-		sounds = []string{"gameshot"}
 		p.LegsWon++
-
-		// Check set won
-		legsNeeded := (e.state.Options.Legs / 2) + 1
+		legsNeeded := (e.state.Options.Legs/2 + 1)
 		if p.LegsWon >= legsNeeded {
 			p.SetsWon++
-			// Check match won
-			setsNeeded := (e.state.Options.Sets / 2) + 1
+			setsNeeded := (e.state.Options.Sets/2 + 1)
 			if p.SetsWon >= setsNeeded {
 				event = "matchshot"
 				sounds = []string{"matchshot"}
@@ -207,21 +187,24 @@ func (e *X01Engine) ProcessThrow(t Throw) ThrowResult {
 				now := time.Now()
 				e.state.FinishedAt = &now
 			} else {
-				e.newSet()
+				event = "gameshot"
+				sounds = []string{"gameshot"}
+				// newSet is called in FinishTakeout
 			}
 		} else {
-			e.newLeg()
+			event = "gameshot"
+			sounds = []string{"gameshot"}
+			// newLeg is called in FinishTakeout
 		}
-
+		e.markVisitDone(p, true)
 		e.state.LastEvent = event
 		e.state.SoundEvents = sounds
 		e.updateCheckoutHint()
-		return ThrowResult{State: e.state, SoundEvents: sounds, Event: event}
+		return ThrowResult{State: *e.State(), SoundEvents: sounds, Event: event}
 	}
 
-	// Check visit complete (3 darts)
+	// Check visit complete (3 darts thrown, no bust, no finish)
 	if e.state.CurrentDart >= 3 {
-		// Visit score events
 		visitScore := p.CurrentVisit.TotalScore
 		switch {
 		case visitScore == 180:
@@ -232,11 +215,8 @@ func (e *X01Engine) ProcessThrow(t Throw) ThrowResult {
 		case visitScore >= 100:
 			sounds = append(sounds, "lowTon")
 		}
-
-		// Check hat trick (3 triples or 3 bulls)
 		if len(p.CurrentVisit.Darts) == 3 {
-			allTriple := true
-			allBull := true
+			allTriple, allBull := true, true
 			for _, d := range p.CurrentVisit.Darts {
 				if d.Multiplier != 3 {
 					allTriple = false
@@ -249,28 +229,125 @@ func (e *X01Engine) ProcessThrow(t Throw) ThrowResult {
 				sounds = append(sounds, "hatTrick")
 			}
 		}
-
-		e.finishVisit(p)
+		e.markVisitDone(p, false)
 	}
 
 	e.updateAverage(p)
 	e.updateCheckoutHint()
-
 	e.state.LastEvent = event
 	e.state.SoundEvents = sounds
-	return ThrowResult{State: e.state, SoundEvents: sounds, Event: event}
+	return ThrowResult{State: *e.State(), SoundEvents: sounds, Event: event}
+}
+
+// markVisitDone records the visit and sets WaitingTakeout.
+// Does NOT advance to next player — that happens in FinishTakeout().
+func (e *X01Engine) markVisitDone(p *PlayerState, legOver bool) {
+	idx := e.playerIndex(p.PlayerID)
+	if idx >= 0 {
+		e.legThrows[idx] = append(e.legThrows[idx], p.CurrentVisit)
+	}
+	// Keep CurrentVisit visible (don't clear) until FinishTakeout()
+	e.state.WaitingTakeout = true
+	// Store whether a new leg/set is needed (handled in FinishTakeout)
+	_ = legOver
+}
+
+// FinishTakeout is called when darts are removed from the board.
+// Clears the visit display, advances to the next player (or starts new leg/set).
+func (e *X01Engine) FinishTakeout() *GameState {
+	if !e.state.WaitingTakeout {
+		return e.State()
+	}
+
+	e.state.WaitingTakeout = false
+	p := &e.state.Players[e.state.CurrentPlayer]
+
+	// Determine what happens next
+	lastEvent := e.state.LastEvent
+
+	// Clear the visit display
+	p.CurrentVisit = Visit{}
+
+	switch lastEvent {
+	case "gameshot":
+		// Check if we need new leg or new set
+		legsNeeded := e.state.Options.Legs/2 + 1
+		if p.LegsWon >= legsNeeded {
+			e.newSet()
+		} else {
+			e.newLeg()
+		}
+	case "matchshot":
+		// Game is finished, nothing to advance
+	case "bust":
+		// Score already reverted, advance to next player
+		e.advancePlayer()
+	default:
+		// Normal 3-dart visit
+		e.advancePlayer()
+	}
+
+	e.state.LastEvent = ""
+	e.state.SoundEvents = nil
+	e.updateCheckoutHint()
+	return e.State()
+}
+
+// NextPlayer can be called manually (e.g. NEXT button) — acts as FinishTakeout
+func (e *X01Engine) NextPlayer() {
+	if e.state.WaitingTakeout {
+		e.FinishTakeout()
+		return
+	}
+	// Manual skip (no darts thrown yet this turn)
+	e.advancePlayer()
+	e.updateCheckoutHint()
+}
+
+func (e *X01Engine) advancePlayer() {
+	e.state.Players[e.state.CurrentPlayer].IsActive = false
+	e.state.CurrentPlayer = (e.state.CurrentPlayer + 1) % len(e.state.Players)
+	e.state.Players[e.state.CurrentPlayer].IsActive = true
+	e.state.CurrentDart = 0
+}
+
+func (e *X01Engine) newLeg() {
+	opts := e.state.Options
+	for i := range e.state.Players {
+		startScore := opts.StartScore
+		if h, ok := opts.Handicaps[e.state.Players[i].PlayerID]; ok {
+			startScore -= h
+		}
+		e.state.Players[i].Score = startScore
+		e.state.Players[i].CurrentVisit = Visit{}
+		e.state.Players[i].HasStarted = opts.InMode == "straight"
+		e.state.Players[i].DartsThrown = 0
+		e.state.Players[i].Average = 0
+	}
+	e.state.CurrentLeg++
+	e.state.CurrentDart = 0
+	e.legThrows = make([][]Visit, len(e.state.Players))
+	// Rotate starting player
+	e.state.Players[e.state.CurrentPlayer].IsActive = false
+	e.state.CurrentPlayer = (e.state.CurrentLeg - 1) % len(e.state.Players)
+	e.state.Players[e.state.CurrentPlayer].IsActive = true
+}
+
+func (e *X01Engine) newSet() {
+	for i := range e.state.Players {
+		e.state.Players[i].LegsWon = 0
+	}
+	e.state.CurrentSet++
+	e.newLeg()
 }
 
 func (e *X01Engine) scoreAtStartOfVisit(p *PlayerState) int {
-	// Reconstruct the score at start of current visit from options
 	startScore := e.state.Options.StartScore
 	if h, ok := e.state.Options.Handicaps[p.PlayerID]; ok {
 		startScore -= h
 	}
-
-	// Sum all completed visits for this player
 	idx := e.playerIndex(p.PlayerID)
-	if idx >= 0 && idx < len(e.legThrows) {
+	if idx >= 0 {
 		for _, v := range e.legThrows[idx] {
 			if !v.IsBust {
 				startScore -= v.TotalScore
@@ -293,70 +370,28 @@ func (e *X01Engine) isBust(p *PlayerState) bool {
 	if p.Score < 0 {
 		return true
 	}
+	if p.Score == 1 && e.state.Options.OutMode == "double" {
+		return true
+	}
 	if p.Score == 0 {
 		return !e.isValidOut(p)
-	}
-	if p.Score == 1 && e.state.Options.OutMode == "double" {
-		return true // can't finish on 1 with double out
 	}
 	return false
 }
 
 func (e *X01Engine) isValidOut(p *PlayerState) bool {
-	lastDart := p.CurrentVisit.Darts[len(p.CurrentVisit.Darts)-1]
+	if len(p.CurrentVisit.Darts) == 0 {
+		return false
+	}
+	last := p.CurrentVisit.Darts[len(p.CurrentVisit.Darts)-1]
 	switch e.state.Options.OutMode {
 	case "double":
-		return lastDart.Multiplier == 2
+		return last.Multiplier == 2
 	case "master":
-		return lastDart.Multiplier == 2 || lastDart.Multiplier == 3
-	default: // straight
+		return last.Multiplier == 2 || last.Multiplier == 3
+	default:
 		return true
 	}
-}
-
-func (e *X01Engine) finishVisit(p *PlayerState) {
-	idx := e.playerIndex(p.PlayerID)
-	if idx >= 0 {
-		e.legThrows[idx] = append(e.legThrows[idx], p.CurrentVisit)
-	}
-	p.CurrentVisit = Visit{}
-	e.NextPlayer()
-}
-
-func (e *X01Engine) NextPlayer() {
-	e.state.Players[e.state.CurrentPlayer].IsActive = false
-	e.state.CurrentPlayer = (e.state.CurrentPlayer + 1) % len(e.state.Players)
-	e.state.Players[e.state.CurrentPlayer].IsActive = true
-	e.state.CurrentDart = 0
-}
-
-func (e *X01Engine) newLeg() {
-	for i := range e.state.Players {
-		startScore := e.state.Options.StartScore
-		if h, ok := e.state.Options.Handicaps[e.state.Players[i].PlayerID]; ok {
-			startScore -= h
-		}
-		e.state.Players[i].Score = startScore
-		e.state.Players[i].CurrentVisit = Visit{}
-		e.state.Players[i].HasStarted = e.state.Options.InMode == "straight"
-		e.state.Players[i].DartsThrown = 0
-		e.state.Players[i].Average = 0
-	}
-	e.state.CurrentLeg++
-	e.state.CurrentDart = 0
-	e.legThrows = make([][]Visit, len(e.state.Players))
-	// Rotate starting player
-	e.state.Players[e.state.CurrentPlayer].IsActive = false
-	e.state.CurrentPlayer = (e.state.CurrentLeg - 1) % len(e.state.Players)
-	e.state.Players[e.state.CurrentPlayer].IsActive = true
-}
-
-func (e *X01Engine) newSet() {
-	for i := range e.state.Players {
-		e.state.Players[i].LegsWon = 0
-	}
-	e.state.CurrentSet++
-	e.newLeg()
 }
 
 func (e *X01Engine) updateAverage(p *PlayerState) {
@@ -364,12 +399,12 @@ func (e *X01Engine) updateAverage(p *PlayerState) {
 		p.Average = 0
 		return
 	}
-	totalScored := e.state.Options.StartScore - p.Score
+	startScore := e.state.Options.StartScore
 	if h, ok := e.state.Options.Handicaps[p.PlayerID]; ok {
-		totalScored = (e.state.Options.StartScore - h) - p.Score
+		startScore -= h
 	}
-	// 3-dart average
-	p.Average = float64(totalScored) / float64(p.DartsThrown) * 3
+	scored := startScore - p.Score
+	p.Average = float64(scored) / float64(p.DartsThrown) * 3
 }
 
 func (e *X01Engine) updateCheckoutHint() {
@@ -382,14 +417,7 @@ func (e *X01Engine) updateCheckoutHint() {
 }
 
 func (e *X01Engine) saveHistory() {
-	snapshot := e.state
-	snapshot.Players = make([]PlayerState, len(e.state.Players))
-	copy(snapshot.Players, e.state.Players)
-	for i := range snapshot.Players {
-		snapshot.Players[i].CurrentVisit.Darts = make([]Throw, len(e.state.Players[i].CurrentVisit.Darts))
-		copy(snapshot.Players[i].CurrentVisit.Darts, e.state.Players[i].CurrentVisit.Darts)
-	}
-	e.history = append(e.history, snapshot)
+	e.history = append(e.history, *e.State())
 }
 
 func (e *X01Engine) Undo() *GameState {
@@ -405,31 +433,19 @@ func (e *X01Engine) Undo() *GameState {
 func (e *X01Engine) CorrectThrow(dartIndex int, newThrow Throw) ThrowResult {
 	p := &e.state.Players[e.state.CurrentPlayer]
 	if dartIndex < 0 || dartIndex >= len(p.CurrentVisit.Darts) {
-		return ThrowResult{State: e.state, Event: "error"}
+		return ThrowResult{State: *e.State(), Event: "error"}
 	}
-
-	// Save for undo
 	e.saveHistory()
-
-	// Replace dart
-	oldDart := p.CurrentVisit.Darts[dartIndex]
 	p.CurrentVisit.Darts[dartIndex] = newThrow
-
-	// Recalculate visit total
 	p.CurrentVisit.TotalScore = 0
 	for _, d := range p.CurrentVisit.Darts {
 		p.CurrentVisit.TotalScore += d.Score
 	}
-
-	// Recalculate player score
 	p.Score = e.scoreAtStartOfVisit(p)
 	for _, d := range p.CurrentVisit.Darts {
 		p.Score -= d.Score
 	}
-
-	_ = oldDart
 	e.updateAverage(p)
 	e.updateCheckoutHint()
-
-	return ThrowResult{State: e.state, SoundEvents: []string{}, Event: fmt.Sprintf("corrected dart %d", dartIndex+1)}
+	return ThrowResult{State: *e.State(), Event: fmt.Sprintf("corrected dart %d", dartIndex+1)}
 }

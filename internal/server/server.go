@@ -90,6 +90,18 @@ func (s *Server) setupPoller() {
 	})
 
 	s.poller.OnTurn(func(evt autodarts.TurnEvent) {
+		// "newTurn" = throws array reset to 0 = player removed darts from board
+		if evt.Status == "newTurn" {
+			s.engineMu.RLock()
+			eng := s.engine
+			s.engineMu.RUnlock()
+
+			if eng != nil {
+				state := eng.FinishTakeout()
+				s.hub.Broadcast(ws.MsgState, state)
+				log.Printf("[SERVER] FinishTakeout triggered by autodarts newTurn")
+			}
+		}
 		s.hub.Broadcast(ws.MsgEvent, ws.EventData{Event: "turn:" + evt.Status})
 	})
 }
@@ -110,6 +122,7 @@ func (s *Server) setupRoutes() {
 	s.mux.HandleFunc("POST /api/games/current/undo", s.handleUndo)
 	s.mux.HandleFunc("POST /api/games/current/correct", s.handleCorrect)
 	s.mux.HandleFunc("POST /api/games/current/next", s.handleNextPlayer)
+	s.mux.HandleFunc("POST /api/games/current/finish-takeout", s.handleFinishTakeout)
 
 	// Players
 	s.mux.HandleFunc("GET /api/players", s.handleListPlayers)
@@ -178,6 +191,9 @@ func (s *Server) handleWSMessage(msg ws.Message) {
 
 	case ws.MsgNextPlayer:
 		s.processNextPlayer()
+
+	case ws.MsgFinishTakeout:
+		s.processFinishTakeout()
 	}
 }
 
@@ -356,6 +372,29 @@ func (s *Server) handleCorrect(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleNextPlayer(w http.ResponseWriter, r *http.Request) {
 	s.processNextPlayer()
+	s.engineMu.RLock()
+	eng := s.engine
+	s.engineMu.RUnlock()
+	if eng != nil {
+		writeJSON(w, http.StatusOK, eng.State())
+	}
+}
+
+func (s *Server) processFinishTakeout() {
+	s.engineMu.RLock()
+	eng := s.engine
+	s.engineMu.RUnlock()
+
+	if eng == nil {
+		return
+	}
+
+	state := eng.FinishTakeout()
+	s.hub.Broadcast(ws.MsgState, state)
+}
+
+func (s *Server) handleFinishTakeout(w http.ResponseWriter, r *http.Request) {
+	s.processFinishTakeout()
 	s.engineMu.RLock()
 	eng := s.engine
 	s.engineMu.RUnlock()
