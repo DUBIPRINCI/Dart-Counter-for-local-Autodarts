@@ -16,6 +16,36 @@
     height: 48px;
     flex-shrink: 0;
     z-index: 100;
+    transition: transform 0.2s ease;
+}
+
+/* Auto-hide header in game screen */
+body.game-active #header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    transform: translateY(-100%);
+    z-index: 200;
+}
+body.game-active.header-visible #header {
+    transform: translateY(0);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+body.game-active #main {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+}
+
+/* Header trigger strip (top of screen in game mode) */
+#header-trigger {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 20px;
+    z-index: 201;
+    cursor: default;
+}
+body.game-active #header-trigger {
+    display: block;
 }
 
 .logo {

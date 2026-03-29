@@ -37,6 +37,7 @@ const app = {
         this.bindKeyboard();
         this.bindPhysicalKeyboard();
         this.bindSettings();
+        this.bindHeaderTrigger();
         this.checkAutodartsStatus();
     },
 
@@ -48,13 +49,43 @@ const app = {
         this.currentScreen = name;
     },
 
-    showHome()     { this.showScreen('home'); },
-    showSetup()    { this.showScreen('setup'); this.renderSetupPlayers(); },
-    showGame()     { this.showScreen('game'); },
+    showHome() {
+        this.showScreen('home');
+        document.body.classList.remove('game-active', 'header-visible');
+        document.getElementById('btn-abandon-game').style.display = 'none';
+        document.getElementById('btn-new-game').style.display = '';
+    },
+    showSetup() {
+        this.showScreen('setup');
+        document.body.classList.remove('game-active', 'header-visible');
+        document.getElementById('btn-abandon-game').style.display = 'none';
+        document.getElementById('btn-new-game').style.display = '';
+        this.loadSetupConfig();
+        this.renderSetupPlayers();
+    },
+    showGame() {
+        this.showScreen('game');
+        document.body.classList.add('game-active');
+        document.body.classList.remove('header-visible');
+        document.getElementById('btn-abandon-game').style.display = '';
+        document.getElementById('btn-new-game').style.display = 'none';
+    },
     showSettings() {
         this.showScreen('settings');
+        document.body.classList.remove('game-active', 'header-visible');
+        document.getElementById('btn-abandon-game').style.display = 'none';
+        document.getElementById('btn-new-game').style.display = '';
         this.checkAutodartsStatus();
         this.loadSoundSettings();
+    },
+
+    async abandonGame() {
+        if (!confirm('Abandonner la partie en cours ?')) return;
+        try {
+            await fetch('/api/games/current', { method: 'DELETE' });
+        } catch (e) {}
+        this.state = null;
+        this.showHome();
     },
 
     // ── Players ────────────────────────────────────────────
@@ -189,6 +220,7 @@ const app = {
                 body: JSON.stringify(opts)
             });
             if (resp.ok) {
+                this.saveSetupConfig();
                 this.state = await resp.json();
                 this.showGame();
                 this.renderGame();
@@ -358,10 +390,9 @@ const app = {
                 if (keyboard) keyboard.parentNode.insertBefore(overlay, keyboard);
             }
             overlay.style.display = 'flex';
-            if (keyboard) keyboard.classList.add('keyboard-disabled');
+            // Keyboard stays active so dart slots can be corrected during takeout
         } else {
             if (overlay) overlay.style.display = 'none';
-            if (keyboard) keyboard.classList.remove('keyboard-disabled');
         }
     },
 
@@ -432,9 +463,10 @@ const app = {
     },
 
     async sendSegment(segment) {
-        if (this.state?.waitingTakeout) return; // ignore during takeout
+        const isCorrection = this.correctingDart >= 0;
+        if (this.state?.waitingTakeout && !isCorrection) return; // block new throws, allow corrections
         let url, body;
-        if (this.correctingDart >= 0) {
+        if (isCorrection) {
             url  = '/api/games/current/correct';
             body = { dartIndex: this.correctingDart, segment };
             this.correctingDart = -1;
@@ -705,6 +737,100 @@ const app = {
             if (resp.ok) await this.loadSoundSettings();
             else alert('Erreur création pack');
         } catch (e) {}
+    },
+
+    // ── Header Auto-hide ──────────────────────────────────
+    bindHeaderTrigger() {
+        let hideTimer = null;
+
+        const showHeader = () => {
+            document.body.classList.add('header-visible');
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(() => {
+                document.body.classList.remove('header-visible');
+            }, 3500);
+        };
+
+        // Mouse: show when near top of screen
+        document.addEventListener('mousemove', (e) => {
+            if (!document.body.classList.contains('game-active')) return;
+            if (e.clientY < 80) showHeader();
+        });
+
+        // Touch: show when touching the trigger strip
+        const trigger = document.getElementById('header-trigger');
+        if (trigger) {
+            trigger.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                showHeader();
+            }, { passive: false });
+        }
+
+        // Clicking header keeps it visible a bit longer
+        document.getElementById('header')?.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimer);
+        });
+        document.getElementById('header')?.addEventListener('mouseleave', () => {
+            if (!document.body.classList.contains('game-active')) return;
+            hideTimer = setTimeout(() => {
+                document.body.classList.remove('header-visible');
+            }, 1500);
+        });
+    },
+
+    // ── Setup Config Persistence ───────────────────────────
+    saveSetupConfig() {
+        try {
+            const config = {
+                gameType:    document.querySelector('.game-type-btn.selected')?.dataset.type || 'x01',
+                variant:     document.querySelector('.game-type-btn.selected')?.dataset.variant || '501',
+                inMode:      this.getSelectedValue('in-mode'),
+                outMode:     this.getSelectedValue('out-mode'),
+                sets:        this.getSelectedValue('sets-count'),
+                legs:        this.getSelectedValue('legs-count'),
+                cricketMode: this.getSelectedValue('cricket-mode'),
+                playerNames: this.setupPlayers.map(p => p.name),
+            };
+            localStorage.setItem('dartcounter_setup', JSON.stringify(config));
+        } catch (e) {}
+    },
+
+    loadSetupConfig() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('dartcounter_setup'));
+            if (!saved) return;
+
+            // Restore game type button
+            document.querySelectorAll('.game-type-btn').forEach(btn => {
+                btn.classList.toggle('selected',
+                    btn.dataset.type === saved.gameType && btn.dataset.variant === saved.variant);
+            });
+            document.getElementById('x01-options')?.classList.toggle('hidden', saved.gameType !== 'x01');
+            document.getElementById('cricket-options')?.classList.toggle('hidden', saved.gameType !== 'cricket');
+
+            // Restore option groups
+            this.setOptionGroup('in-mode',      saved.inMode);
+            this.setOptionGroup('out-mode',     saved.outMode);
+            this.setOptionGroup('sets-count',   saved.sets);
+            this.setOptionGroup('legs-count',   saved.legs);
+            this.setOptionGroup('cricket-mode', saved.cricketMode);
+
+            // Restore players by name (match against loaded player list)
+            if (saved.playerNames?.length > 0 && this.setupPlayers.length === 0) {
+                this.setupPlayers = saved.playerNames
+                    .map(name => this.players.find(p => p.name === name))
+                    .filter(Boolean);
+            }
+        } catch (e) {}
+    },
+
+    setOptionGroup(groupId, value) {
+        if (!value) return;
+        const group = document.getElementById(groupId);
+        if (!group) return;
+        group.querySelectorAll('.opt-btn').forEach(btn => {
+            btn.classList.toggle('selected', btn.dataset.value === value);
+        });
     },
 
     // ── Utilities ──────────────────────────────────────────

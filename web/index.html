@@ -22,10 +22,13 @@
                 <span id="game-info"></span>
             </div>
             <div class="header-right">
+                <button id="btn-abandon-game" class="btn btn-danger" style="display:none" onclick="app.abandonGame()">&#10005; Fermer</button>
                 <button id="btn-new-game" class="btn btn-primary">Nouvelle Partie</button>
                 <button id="btn-settings" class="btn btn-icon" title="Paramètres">&#9881;</button>
             </div>
         </header>
+        <!-- Trigger zone for auto-show header in game screen -->
+        <div id="header-trigger"></div>
 
         <main id="main">
             <!-- Home screen -->
