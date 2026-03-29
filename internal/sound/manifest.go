@@ -63,6 +63,85 @@ func ListPacks(soundsDir string) ([]Pack, error) {
 	return packs, nil
 }
 
+// EnsurePack creates a pack directory and empty manifest if they don't exist.
+func EnsurePack(soundsDir, packName string) error {
+	packDir := filepath.Join(soundsDir, packName)
+	if err := os.MkdirAll(packDir, 0755); err != nil {
+		return fmt.Errorf("create pack dir: %w", err)
+	}
+	manifestPath := filepath.Join(packDir, "manifest.json")
+	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+		m := Manifest{Name: packName, Version: "1.0", Sounds: make(map[string]string)}
+		data, _ := json.MarshalIndent(m, "", "  ")
+		return os.WriteFile(manifestPath, data, 0644)
+	}
+	return nil
+}
+
+// GetPack reads a single pack by directory name.
+func GetPack(soundsDir, packName string) (*Pack, error) {
+	manifestPath := filepath.Join(soundsDir, packName, "manifest.json")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest: %w", err)
+	}
+	var m Manifest
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parse manifest: %w", err)
+	}
+	if m.Sounds == nil {
+		m.Sounds = make(map[string]string)
+	}
+	return &Pack{Name: m.Name, Dir: packName, Sounds: m.Sounds}, nil
+}
+
+// UpdatePackSound sets event → filename in the pack manifest.
+func UpdatePackSound(soundsDir, packName, event, filename string) error {
+	packDir := filepath.Join(soundsDir, packName)
+	manifestPath := filepath.Join(packDir, "manifest.json")
+
+	var m Manifest
+	if data, err := os.ReadFile(manifestPath); err == nil {
+		json.Unmarshal(data, &m)
+	}
+	if m.Sounds == nil {
+		m.Sounds = make(map[string]string)
+	}
+	if m.Name == "" {
+		m.Name = packName
+	}
+	if m.Version == "" {
+		m.Version = "1.0"
+	}
+	m.Sounds[event] = filename
+	data, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(manifestPath, data, 0644)
+}
+
+// RemovePackSound deletes a sound event from the manifest and removes the file.
+func RemovePackSound(soundsDir, packName, event string) error {
+	packDir := filepath.Join(soundsDir, packName)
+	manifestPath := filepath.Join(packDir, "manifest.json")
+
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return err
+	}
+	var m Manifest
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	if filename, ok := m.Sounds[event]; ok && filename != "" {
+		os.Remove(filepath.Join(packDir, filename)) // best-effort
+	}
+	delete(m.Sounds, event)
+	out, _ := json.MarshalIndent(m, "", "  ")
+	return os.WriteFile(manifestPath, out, 0644)
+}
+
 // CreateDefaultManifest creates a template manifest.json
 func CreateDefaultManifest(dir string) error {
 	m := Manifest{

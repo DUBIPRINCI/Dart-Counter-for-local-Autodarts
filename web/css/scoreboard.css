@@ -1,203 +1,271 @@
-/* Game Layout */
+/* ─── Game Layout ─────────────────────────────── */
 .game-layout {
     display: flex;
     flex-direction: column;
     height: 100%;
-}
-
-/* Players Container */
-.players-container {
-    display: flex;
-    gap: 2px;
-    padding: 8px;
-    flex-shrink: 0;
-}
-
-.player-panel {
-    flex: 1;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 12px;
-    border: 2px solid var(--border-color);
-    transition: border-color var(--transition-fast);
-    text-align: center;
-    min-width: 0;
-}
-.player-panel.active {
-    border-color: var(--accent-green);
-    box-shadow: 0 0 12px var(--accent-green-dim);
-}
-
-.player-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-}
-.player-panel.active .player-name {
-    color: var(--accent-green);
 }
 
-.player-score {
-    font-family: var(--font-score);
-    font-size: 2.8rem;
-    font-weight: 700;
-    line-height: 1;
-    margin-bottom: 4px;
-    font-variant-numeric: tabular-nums;
-}
-
-.player-stats {
+/* ─── Active Player Zone ──────────────────────── */
+.active-zone {
+    flex: 1;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px 6px;
+    min-height: 0;
+    gap: 2px;
+}
+
+.active-top {
+    display: flex;
+    align-items: center;
     justify-content: center;
     gap: 12px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    width: 100%;
+    flex-wrap: wrap;
 }
-.player-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.player-stat-value {
+
+.active-name {
+    font-size: 1.5rem;
     font-weight: 700;
-    color: var(--text-secondary);
+    color: var(--accent-green);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.active-score {
     font-family: var(--font-score);
-}
-
-.player-legs {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-top: 4px;
-}
-.player-legs .leg-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--border-color);
-    margin: 0 2px;
-}
-.player-legs .leg-dot.won {
-    background: var(--accent-green);
-}
-
-/* Game Center */
-.game-center {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    min-height: 0;
-}
-
-/* Visit Display */
-.visit-display {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 8px;
-}
-
-.visit-darts {
-    display: flex;
-    gap: 8px;
-}
-
-.visit-dart {
-    width: 64px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-surface);
-    border: 2px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    font-family: var(--font-score);
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-.visit-dart.empty {
-    color: var(--text-muted);
-}
-.visit-dart.filled {
+    font-size: 5.5rem;
+    font-weight: 900;
+    line-height: 1;
     color: var(--text-primary);
-    border-color: var(--accent-blue);
-}
-.visit-dart.triple {
-    color: var(--accent-gold);
-    border-color: var(--accent-gold);
-}
-.visit-dart.double {
-    color: var(--accent-green);
-    border-color: var(--accent-green);
-}
-.visit-dart.correcting {
-    border-color: var(--accent-gold);
-    box-shadow: 0 0 8px var(--accent-gold-dim);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -3px;
 }
 
-.visit-total {
-    font-family: var(--font-score);
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--accent-green);
-    min-width: 60px;
-    text-align: center;
+.active-stats {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+    justify-content: center;
 }
+.active-stats span { font-weight: 700; color: var(--text-secondary); font-family: var(--font-score); margin-right: 2px; }
 
-/* Checkout Hint */
-.checkout-hint {
-    font-size: 1rem;
-    color: var(--accent-gold);
-    font-weight: 600;
-    min-height: 24px;
-    text-align: center;
-}
+.leg-dots { display: flex; gap: 3px; align-items: center; }
+.leg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-color); }
+.leg-dot.won { background: var(--accent-green); }
 
-/* Event Display */
+/* ─── Event & Checkout ────────────────────────── */
 .event-display {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 800;
     text-align: center;
-    min-height: 48px;
+    min-height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.event-display.bust {
-    color: var(--accent-red);
-}
-.event-display.gameshot {
-    color: var(--accent-green);
-}
-.event-display.one-eighty {
+.event-display.bust    { color: var(--accent-red); }
+.event-display.gameshot { color: var(--accent-green); }
+.event-display.one-eighty { color: var(--accent-gold); }
+
+.checkout-hint {
+    font-size: 0.88rem;
     color: var(--accent-gold);
+    font-weight: 600;
+    min-height: 18px;
+    text-align: center;
 }
 
-/* Cricket-specific marks display */
-.cricket-marks {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    margin-top: 8px;
+/* ─── Dart Slots ──────────────────────────────── */
+.active-darts {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 6px;
 }
-.cricket-mark {
-    text-align: center;
-    font-size: 0.75rem;
+
+.adart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    min-height: 66px;
+    background: var(--bg-surface);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+    gap: 2px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
-.cricket-mark-number {
-    color: var(--text-muted);
-    font-size: 0.7rem;
+.adart:active:not(.total) { transform: scale(0.96); }
+.adart:hover:not(.total)  { border-color: var(--text-secondary); background: var(--bg-hover); }
+
+.adart.empty .adart-val  { color: var(--text-muted); }
+.adart.filled            { border-color: var(--accent-blue); }
+.adart.filled .adart-val { color: var(--text-primary); }
+.adart.double            { border-color: var(--accent-green); }
+.adart.double .adart-val { color: var(--accent-green); }
+.adart.triple            { border-color: var(--accent-gold); }
+.adart.triple .adart-val { color: var(--accent-gold); }
+.adart.miss .adart-val   { color: var(--text-muted); }
+.adart.correcting {
+    border-color: var(--accent-gold) !important;
+    box-shadow: 0 0 12px var(--accent-gold-dim);
+    animation: pulse-border 1s ease-in-out infinite;
 }
-.cricket-mark-count {
-    font-weight: 700;
+.adart.total {
+    cursor: default;
+    border-color: var(--accent-green-dim);
+    background: var(--bg-secondary);
+    min-width: 72px;
+}
+.adart.total .adart-val { color: var(--accent-green); font-size: 1.5rem; }
+
+@keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 8px var(--accent-gold-dim); }
+    50%       { box-shadow: 0 0 16px var(--accent-gold); }
+}
+
+.adart-val {
     font-family: var(--font-score);
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1;
 }
+.adart-lbl {
+    font-size: 0.58rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* ─── Waiting Players Zone ────────────────────── */
+.waiting-zone {
+    flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+    padding: 5px 8px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.waiting-zone:empty { display: none; }
+
+.waiting-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    min-width: 78px;
+    flex-shrink: 0;
+}
+.waiting-card-name {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.waiting-card-score {
+    font-family: var(--font-score);
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+.waiting-card-avg {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+}
+
+/* ─── Sound Settings ──────────────────────────── */
+.sound-events-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sound-section-header {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 10px 4px 3px;
+}
+
+.sound-event-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+}
+.sound-event-label {
+    flex: 0 0 160px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.sound-event-file {
+    flex: 1;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: italic;
+}
+.sound-event-file.has-file {
+    color: var(--accent-green);
+    font-style: normal;
+    font-weight: 600;
+}
+.sound-event-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.btn-icon-sm {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    transition: all 0.12s;
+    line-height: 1;
+    padding: 0;
+}
+.btn-icon-sm:hover             { background: var(--bg-hover); color: var(--text-primary); }
+.btn-icon-sm.play:hover        { border-color: var(--accent-green); color: var(--accent-green); }
+.btn-icon-sm.delete:hover      { border-color: var(--accent-red); color: var(--accent-red); }
+
+/* Cricket marks (kept for cricket game type) */
+.cricket-marks { display: grid; grid-template-columns: repeat(7,1fr); gap:4px; margin-top:6px; }
+.cricket-mark { text-align:center; font-size:0.75rem; }
+.cricket-mark-number { color:var(--text-muted); font-size:0.7rem; }
+.cricket-mark-count { font-weight:700; font-family:var(--font-score); }

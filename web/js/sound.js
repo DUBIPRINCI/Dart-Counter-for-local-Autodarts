@@ -20,20 +20,21 @@ class SoundManager {
     }
 
     async loadPack(packName) {
+        if (!this.ctx) return;
         try {
-            const resp = await fetch(`/api/sounds/packs`);
-            const packs = await resp.json();
-            const pack = packs.find(p => p.dir === packName);
-            if (!pack) return;
+            const resp = await fetch(`/api/sounds/packs/manifest?pack=${encodeURIComponent(packName)}`);
+            if (!resp.ok) return;
+            const pack = await resp.json();
+            if (!pack?.sounds) return;
 
             this.activePack = packName;
             this.buffers = {};
 
-            const loadPromises = [];
-            for (const [event, filename] of Object.entries(pack.sounds)) {
-                loadPromises.push(this.loadSound(event, `/sounds/${packName}/${filename}`));
-            }
+            const loadPromises = Object.entries(pack.sounds).map(([event, filename]) =>
+                this.loadSound(event, `/sounds/${encodeURIComponent(packName)}/${encodeURIComponent(filename)}`)
+            );
             await Promise.allSettled(loadPromises);
+            console.log(`[Sound] Loaded pack "${packName}": ${Object.keys(this.buffers).length} sounds`);
         } catch (e) {
             console.warn('Failed to load sound pack:', e);
         }
@@ -46,55 +47,59 @@ class SoundManager {
             const data = await resp.arrayBuffer();
             this.buffers[name] = await this.ctx.decodeAudioData(data);
         } catch (e) {
-            // Sound file not found, skip silently
+            // Sound file missing or decode error — skip silently
         }
     }
 
     play(eventName) {
         if (!this.ctx || !this.buffers[eventName]) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
 
-        // Resume context if suspended (autoplay policy)
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
+        const source   = this.ctx.createBufferSource();
+        source.buffer  = this.buffers[eventName];
 
-        const source = this.ctx.createBufferSource();
-        source.buffer = this.buffers[eventName];
+        const gain      = this.ctx.createGain();
+        gain.gain.value = this.volume;
 
-        const gainNode = this.ctx.createGain();
-        gainNode.gain.value = this.volume;
-
-        source.connect(gainNode);
-        gainNode.connect(this.ctx.destination);
+        source.connect(gain);
+        gain.connect(this.ctx.destination);
         source.start(0);
     }
 
     playEvents(events) {
         if (!events || events.length === 0) return;
 
-        // Priority: match events > visit events > dart events
+        // Always play generic throw sound first
+        if (events.includes('throw')) this.play('throw');
+
+        // High-priority match/visit events — play one and stop
         const priority = ['matchshot', 'gameshot', 'bust', '180', 'hatTrick', 'highTon', 'lowTon'];
-
-        // Always play throw sound
-        if (events.includes('throw')) {
-            this.play('throw');
-        }
-
-        // Play highest priority event sound
         for (const p of priority) {
             if (events.includes(p)) {
                 this.play(p);
-                return;
+                return; // don't play dart sound or caller on these
             }
         }
 
-        // Play dart-level sound
+        // Dart-level sounds — play the best one
         const dartSounds = ['triple', 'dbull', 'bull', 'double', 'single', 'miss'];
         for (const d of dartSounds) {
             if (events.includes(d)) {
                 this.play(d);
-                return;
+                break;
             }
+        }
+
+        // Caller sound — specific score first, then generic fallback
+        const callerEvent = events.find(e => e.startsWith('caller_'));
+        if (callerEvent) {
+            setTimeout(() => {
+                if (this.buffers[callerEvent]) {
+                    this.play(callerEvent);
+                } else if (this.buffers['caller']) {
+                    this.play('caller');
+                }
+            }, 700);
         }
     }
 

@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="/css/theme.css">
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/scoreboard.css">
-    <link rel="stylesheet" href="/css/dartboard.css">
     <link rel="stylesheet" href="/css/keyboard.css">
     <link rel="stylesheet" href="/css/animations.css">
 </head>
@@ -28,24 +27,21 @@
             </div>
         </header>
 
-        <!-- Main content area - changes based on state -->
         <main id="main">
-            <!-- Home / Setup screen -->
+            <!-- Home screen -->
             <div id="screen-home" class="screen active">
                 <div class="home-hero">
                     <h2>DartCounter</h2>
                     <p>Compteur de fléchettes local avec Autodarts</p>
                     <button class="btn btn-primary btn-lg" onclick="app.showSetup()">Nouvelle Partie</button>
                 </div>
-                <div id="recent-games" class="recent-games"></div>
             </div>
 
-            <!-- Game Setup screen -->
+            <!-- Setup screen -->
             <div id="screen-setup" class="screen">
                 <div class="setup-container">
                     <h2>Configuration de la partie</h2>
 
-                    <!-- Game Type Selection -->
                     <div class="setup-section">
                         <h3>Type de jeu</h3>
                         <div class="game-type-grid" id="game-type-grid">
@@ -59,7 +55,6 @@
                         </div>
                     </div>
 
-                    <!-- X01 Options -->
                     <div class="setup-section" id="x01-options">
                         <h3>Options</h3>
                         <div class="option-row">
@@ -97,7 +92,6 @@
                         </div>
                     </div>
 
-                    <!-- Cricket Options -->
                     <div class="setup-section hidden" id="cricket-options">
                         <h3>Mode Cricket</h3>
                         <div class="option-group" id="cricket-mode">
@@ -107,7 +101,6 @@
                         </div>
                     </div>
 
-                    <!-- Players -->
                     <div class="setup-section">
                         <h3>Joueurs</h3>
                         <div id="player-list" class="player-list"></div>
@@ -119,7 +112,7 @@
 
                     <div class="setup-actions">
                         <button class="btn btn-secondary" onclick="app.showHome()">Annuler</button>
-                        <button class="btn btn-primary btn-lg" onclick="app.startGame()">Lancer la partie</button>
+                        <button class="btn btn-primary btn-lg" onclick="app.startGame()">Lancer</button>
                     </div>
                 </div>
             </div>
@@ -127,22 +120,40 @@
             <!-- Game screen -->
             <div id="screen-game" class="screen">
                 <div class="game-layout">
-                    <!-- Player panels -->
-                    <div id="players-container" class="players-container"></div>
 
-                    <!-- Center: dartboard + visit info -->
-                    <div class="game-center">
-                        <div id="visit-display" class="visit-display">
-                            <div class="visit-darts" id="visit-darts">
-                                <div class="visit-dart empty" data-index="0">-</div>
-                                <div class="visit-dart empty" data-index="1">-</div>
-                                <div class="visit-dart empty" data-index="2">-</div>
-                            </div>
-                            <div class="visit-total" id="visit-total">0</div>
+                    <!-- Active player zone -->
+                    <div class="active-zone" id="active-zone">
+                        <div class="active-top">
+                            <span class="active-name" id="ap-name">—</span>
+                            <span id="checkout-hint" class="checkout-hint"></span>
                         </div>
-                        <div id="checkout-hint" class="checkout-hint"></div>
+                        <div class="active-score" id="ap-score">—</div>
+                        <div class="active-stats" id="ap-stats"></div>
                         <div id="event-display" class="event-display"></div>
+
+                        <!-- 3 clickable dart slots -->
+                        <div class="active-darts" id="active-darts">
+                            <div class="adart empty" data-index="0">
+                                <span class="adart-val">—</span>
+                                <span class="adart-lbl">D1</span>
+                            </div>
+                            <div class="adart empty" data-index="1">
+                                <span class="adart-val">—</span>
+                                <span class="adart-lbl">D2</span>
+                            </div>
+                            <div class="adart empty" data-index="2">
+                                <span class="adart-val">—</span>
+                                <span class="adart-lbl">D3</span>
+                            </div>
+                            <div class="adart total">
+                                <span class="adart-val" id="ap-total">0</span>
+                                <span class="adart-lbl">TOT</span>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Waiting players -->
+                    <div class="waiting-zone" id="waiting-players"></div>
 
                     <!-- Keyboard -->
                     <div id="keyboard" class="keyboard">
@@ -183,6 +194,7 @@
                             <button class="key-btn action" data-action="next">NEXT &#9654;</button>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -190,6 +202,7 @@
             <div id="screen-settings" class="screen">
                 <div class="settings-container">
                     <h2>Paramètres</h2>
+
                     <div class="settings-section">
                         <h3>Autodarts Board Manager</h3>
                         <div class="setting-row">
@@ -197,17 +210,25 @@
                             <span id="settings-bm-status">Vérification...</span>
                         </div>
                     </div>
+
                     <div class="settings-section">
                         <h3>Sons</h3>
                         <div class="setting-row">
                             <label>Pack actif</label>
-                            <select id="sound-pack-select" class="input"></select>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <select id="sound-pack-select" class="input" onchange="app.onPackChange(this.value)"></select>
+                                <button class="btn btn-secondary" style="white-space:nowrap" onclick="app.promptCreatePack()">+ Pack</button>
+                            </div>
                         </div>
                         <div class="setting-row">
                             <label>Volume</label>
                             <input type="range" id="sound-volume" min="0" max="100" value="80" class="slider">
                         </div>
+                        <div id="sound-events-list" class="sound-events-list">
+                            <p style="color:var(--text-muted);font-size:0.85rem">Sélectionnez un pack pour gérer les sons.</p>
+                        </div>
                     </div>
+
                     <button class="btn btn-secondary" onclick="app.showHome()">Retour</button>
                 </div>
             </div>

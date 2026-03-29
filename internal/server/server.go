@@ -3,9 +3,12 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -73,6 +76,7 @@ func (s *Server) setupPoller() {
 		t := game.NewThrowWithCoords(segment, evt.Throw.Coords.X, evt.Throw.Coords.Y)
 
 		result := eng.ProcessThrow(t)
+		s.appendCallerSound(&result)
 
 		s.hub.Broadcast(ws.MsgState, result.State)
 		if len(result.SoundEvents) > 0 {
@@ -82,7 +86,6 @@ func (s *Server) setupPoller() {
 			s.hub.Broadcast(ws.MsgEvent, ws.EventData{Event: result.Event})
 		}
 
-		// Persist game if finished
 		if result.State.Status == "finished" {
 			winnerID := result.State.WinnerID
 			s.db.UpdateGameStatus(eng.GetID(), "finished", &winnerID)
@@ -90,12 +93,20 @@ func (s *Server) setupPoller() {
 	})
 
 	s.poller.OnTurn(func(evt autodarts.TurnEvent) {
-		// "newTurn" = throws array reset to 0 = player removed darts from board
-		if evt.Status == "newTurn" {
-			s.engineMu.RLock()
-			eng := s.engine
-			s.engineMu.RUnlock()
+		s.engineMu.RLock()
+		eng := s.engine
+		s.engineMu.RUnlock()
 
+		switch evt.Status {
+		case "Takeout", "TakeoutInProcess":
+			// Player started removing darts — advance even if < 3 thrown
+			if eng != nil {
+				eng.NextPlayer()
+				s.hub.Broadcast(ws.MsgState, eng.State())
+				log.Printf("[SERVER] NextPlayer triggered by autodarts status: %s", evt.Status)
+			}
+		case "newTurn":
+			// Throws array reset to 0 — finish any pending takeout
 			if eng != nil {
 				state := eng.FinishTakeout()
 				s.hub.Broadcast(ws.MsgState, state)
@@ -135,6 +146,10 @@ func (s *Server) setupRoutes() {
 
 	// Sounds
 	s.mux.HandleFunc("GET /api/sounds/packs", s.handleListSoundPacks)
+	s.mux.HandleFunc("POST /api/sounds/packs", s.handleCreatePack)
+	s.mux.HandleFunc("GET /api/sounds/packs/manifest", s.handleGetPack)
+	s.mux.HandleFunc("POST /api/sounds/upload", s.handleUploadSound)
+	s.mux.HandleFunc("DELETE /api/sounds/sound", s.handleDeleteSound)
 
 	// Autodarts status + debug
 	s.mux.HandleFunc("GET /api/autodarts/status", s.handleAutodartsStatus)
@@ -197,6 +212,18 @@ func (s *Server) handleWSMessage(msg ws.Message) {
 	}
 }
 
+// appendCallerSound adds a caller_N event when a visit just completed.
+func (s *Server) appendCallerSound(result *game.ThrowResult) {
+	if !result.State.WaitingTakeout {
+		return
+	}
+	p := result.State.Players[result.State.CurrentPlayer]
+	score := p.CurrentVisit.TotalScore
+	if score > 0 {
+		result.SoundEvents = append(result.SoundEvents, fmt.Sprintf("caller_%d", score))
+	}
+}
+
 func (s *Server) processManualThrow(segment string) {
 	s.engineMu.RLock()
 	eng := s.engine
@@ -209,6 +236,7 @@ func (s *Server) processManualThrow(segment string) {
 	t := game.NewThrow(segment)
 	t.IsManual = true
 	result := eng.ProcessThrow(t)
+	s.appendCallerSound(&result)
 
 	s.hub.Broadcast(ws.MsgState, result.State)
 	if len(result.SoundEvents) > 0 {
@@ -487,6 +515,103 @@ func (s *Server) handleListSoundPacks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, packs)
+}
+
+func (s *Server) handleCreatePack(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil || strings.TrimSpace(data.Name) == "" {
+		writeError(w, http.StatusBadRequest, "name required")
+		return
+	}
+	name := strings.TrimSpace(data.Name)
+	if err := sound.EnsurePack(s.cfg.SoundsDir, name); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pack, _ := sound.GetPack(s.cfg.SoundsDir, name)
+	writeJSON(w, http.StatusCreated, pack)
+}
+
+func (s *Server) handleGetPack(w http.ResponseWriter, r *http.Request) {
+	packName := r.URL.Query().Get("pack")
+	if packName == "" {
+		packName = "default"
+	}
+	pack, err := sound.GetPack(s.cfg.SoundsDir, packName)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "pack not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, pack)
+}
+
+func (s *Server) handleUploadSound(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid multipart form")
+		return
+	}
+	pack := strings.TrimSpace(r.FormValue("pack"))
+	event := strings.TrimSpace(r.FormValue("event"))
+	if pack == "" || event == "" {
+		writeError(w, http.StatusBadRequest, "pack and event required")
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "file required")
+		return
+	}
+	defer file.Close()
+
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	allowed := map[string]bool{".mp3": true, ".wav": true, ".ogg": true, ".m4a": true, ".webm": true}
+	if !allowed[ext] {
+		writeError(w, http.StatusBadRequest, "format non supporté (mp3, wav, ogg, m4a, webm)")
+		return
+	}
+
+	if err := sound.EnsurePack(s.cfg.SoundsDir, pack); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	filename := event + ext
+	destPath := filepath.Join(s.cfg.SoundsDir, pack, filename)
+	out, err := os.Create(destPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "cannot save file: "+err.Error())
+		return
+	}
+	defer out.Close()
+	if _, err := io.Copy(out, file); err != nil {
+		writeError(w, http.StatusInternalServerError, "write error: "+err.Error())
+		return
+	}
+
+	if err := sound.UpdatePackSound(s.cfg.SoundsDir, pack, event, filename); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	log.Printf("[SOUND] Uploaded %s → %s/%s", event, pack, filename)
+	writeJSON(w, http.StatusOK, map[string]string{"pack": pack, "event": event, "filename": filename})
+}
+
+func (s *Server) handleDeleteSound(w http.ResponseWriter, r *http.Request) {
+	pack := r.URL.Query().Get("pack")
+	event := r.URL.Query().Get("event")
+	if pack == "" || event == "" {
+		writeError(w, http.StatusBadRequest, "pack and event required")
+		return
+	}
+	if err := sound.RemovePackSound(s.cfg.SoundsDir, pack, event); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 func (s *Server) handleAutodartsStatus(w http.ResponseWriter, r *http.Request) {
