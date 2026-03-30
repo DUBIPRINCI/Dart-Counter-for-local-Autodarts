@@ -28,7 +28,7 @@
 }
 
 .active-name {
-    font-size: 2rem;
+    font-size: 50px;
     font-weight: 700;
     color: var(--accent-green);
     letter-spacing: 0.06em;
@@ -37,7 +37,7 @@
 
 .active-score {
     font-family: var(--font-score);
-    font-size: 8rem;
+    font-size: 300px;
     font-weight: 900;
     line-height: 1;
     color: var(--text-primary);
@@ -54,7 +54,7 @@
     flex-wrap: wrap;
     justify-content: center;
 }
-.active-stats span { font-weight: 700; color: var(--text-secondary); font-family: var(--font-score); margin-right: 2px; font-size: 1.1rem; }
+.active-stats span { font-weight: 700; color: var(--text-secondary); font-family: var(--font-score); margin-right: 2px; font-size: 50px; }
 
 .leg-dots { display: flex; gap: 3px; align-items: center; }
 .leg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-color); }
@@ -95,8 +95,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 76px;
-    min-height: 66px;
+    width: 100px;
+    min-height: 100px;
     background: var(--bg-surface);
     border: 2px solid var(--border-color);
     border-radius: var(--radius-md);

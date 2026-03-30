@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -9,7 +10,14 @@
     <link rel="stylesheet" href="/css/scoreboard.css">
     <link rel="stylesheet" href="/css/keyboard.css">
     <link rel="stylesheet" href="/css/animations.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <div id="app">
         <!-- Header -->
@@ -22,7 +30,8 @@
                 <span id="game-info"></span>
             </div>
             <div class="header-right">
-                <button id="btn-abandon-game" class="btn btn-danger" style="display:none" onclick="app.abandonGame()">&#10005; Fermer</button>
+                <button id="btn-abandon-game" class="btn btn-danger" style="display:none"
+                    onclick="app.abandonGame()">&#10005; Fermer</button>
                 <button id="btn-new-game" class="btn btn-primary">Nouvelle Partie</button>
                 <button id="btn-settings" class="btn btn-icon" title="Paramètres">&#9881;</button>
             </div>
@@ -52,9 +61,11 @@
                             <button class="game-type-btn" data-type="x01" data-variant="301">301</button>
                             <button class="game-type-btn" data-type="x01" data-variant="701">701</button>
                             <button class="game-type-btn" data-type="cricket" data-variant="standard">Cricket</button>
-                            <button class="game-type-btn" data-type="atc" data-variant="standard">Around the Clock</button>
+                            <button class="game-type-btn" data-type="atc" data-variant="standard">Around the
+                                Clock</button>
                             <button class="game-type-btn" data-type="shanghai" data-variant="standard">Shanghai</button>
-                            <button class="game-type-btn" data-type="highscore" data-variant="standard">High Score</button>
+                            <button class="game-type-btn" data-type="highscore" data-variant="standard">High
+                                Score</button>
                         </div>
                     </div>
 
@@ -108,7 +119,8 @@
                         <h3>Joueurs</h3>
                         <div id="player-list" class="player-list"></div>
                         <div class="add-player-row">
-                            <input type="text" id="new-player-name" placeholder="Nom du joueur" class="input" maxlength="20">
+                            <input type="text" id="new-player-name" placeholder="Nom du joueur" class="input"
+                                maxlength="20">
                             <button class="btn btn-primary" onclick="app.addPlayer()">Ajouter</button>
                         </div>
                     </div>
@@ -219,8 +231,10 @@
                         <div class="setting-row">
                             <label>Pack actif</label>
                             <div style="display:flex;gap:8px;align-items:center">
-                                <select id="sound-pack-select" class="input" onchange="app.onPackChange(this.value)"></select>
-                                <button class="btn btn-secondary" style="white-space:nowrap" onclick="app.promptCreatePack()">+ Pack</button>
+                                <select id="sound-pack-select" class="input"
+                                    onchange="app.onPackChange(this.value)"></select>
+                                <button class="btn btn-secondary" style="white-space:nowrap"
+                                    onclick="app.promptCreatePack()">+ Pack</button>
                             </div>
                         </div>
                         <div class="setting-row">
@@ -228,7 +242,8 @@
                             <input type="range" id="sound-volume" min="0" max="100" value="80" class="slider">
                         </div>
                         <div id="sound-events-list" class="sound-events-list">
-                            <p style="color:var(--text-muted);font-size:0.85rem">Sélectionnez un pack pour gérer les sons.</p>
+                            <p style="color:var(--text-muted);font-size:0.85rem">Sélectionnez un pack pour gérer les
+                                sons.</p>
                         </div>
                     </div>
 
@@ -242,4 +257,5 @@
     <script src="/js/ws.js"></script>
     <script src="/js/app.js"></script>
 </body>
+
 </html>

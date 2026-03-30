@@ -21,7 +21,7 @@
     --accent-blue: #3498db;
 
     --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-score: 'Courier New', 'Consolas', monospace;
+    --font-score: "Oswald", sans-serif;
 
     --radius-sm: 6px;
     --radius-md: 10px;
